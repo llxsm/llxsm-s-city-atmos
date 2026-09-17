@@ -1,0 +1,460 @@
+# ============================================================
+# 数据资产注册表 (Data Asset Registry)
+# ------------------------------------------------------------
+# 本文件是平台"数据资产管理"的核心元数据源：每一个数据集在此
+# 声明为一项受治理的数据资产，包含归属、SLA、更新频率、字段
+# 字典、值域约束与血缘关系。bootstrap 时写入 SQLite 资产目录。
+#
+# layer 分层约定：
+#   reference —— 参考/主数据（维度）
+#   raw       —— 原始接入层，保持与数据源同构，不做业务加工
+#   refined   —— 精炼层，跨源关联、清洗、口径统一
+#   serving   —— 服务层，面向看板与对外 API 的聚合结果
+# ============================================================
+
+assets:
+
+  # ----------------------------------------------------------
+  # 1. 参考数据：城市地理编码
+  # ----------------------------------------------------------
+  - key: openmeteo.geocoding.places
+    name: 城市地理编码参考数据
+    domain: reference
+    layer: reference
+    description: >-
+      Open-Meteo Geocoding API 返回的全球地名检索结果，用于解析城市主数据的
+      标准经纬度、时区、行政归属与人口。作为维度表为全部事实资产提供坐标口径，
+      是血缘图谱的最上游。
+    business_definition: 以 WGS84 坐标和 IANA 时区唯一标识一个城市监测点位。
+    owner: 数据平台组
+    steward: 主数据管理员
+    source_system: Open-Meteo
+    source_product: Geocoding API
+    source_endpoint: https://geocoding-api.open-meteo.com/v1/search
+    source_doc: https://open-meteo.com/en/docs/geocoding-api
+    license: CC-BY-4.0
+    granularity: 城市（非时序）
+    update_frequency: weekly
+    sla_freshness_minutes: 10080
+    sla_completeness: 1.0
+    sensitivity: public
+    status: active
+    tags: [主数据, 维度表, 地理编码, 参考数据]
+    primary_key: [slug]
+    time_column: null
+    partition_keys: []
+    columns:
+      - {name: slug, type: string, unit: "-", nullable: false, pk: true, desc: 平台内城市唯一标识（英文短名）}
+      - {name: name_zh, type: string, unit: "-", nullable: false, desc: 城市中文名称}
+      - {name: name_en, type: string, unit: "-", nullable: false, desc: 城市英文名称}
+      - {name: country, type: string, unit: "-", nullable: false, desc: 所属国家/地区}
+      - {name: country_code, type: string, unit: "-", nullable: false, desc: ISO 3166-1 alpha-2 国家代码, enum: [CN, JP, SG, GB, FR, US]}
+      - {name: admin1, type: string, unit: "-", nullable: true, desc: 一级行政区名称}
+      - {name: latitude, type: double, unit: "°", nullable: false, range: [-90, 90], desc: WGS84 纬度}
+      - {name: longitude, type: double, unit: "°", nullable: false, range: [-180, 180], desc: WGS84 经度}
+      - {name: elevation, type: double, unit: m, nullable: true, range: [-430, 9000], desc: 平均海拔}
+      - {name: timezone, type: string, unit: "-", nullable: false, desc: IANA 时区标识}
+      - {name: population, type: integer, unit: 人, nullable: true, range: [0, 100000000], desc: 城市常住人口}
+      - {name: climate_zone, type: string, unit: "-", nullable: true, desc: 气候类型}
+      - {name: ingested_at, type: timestamp, unit: iso8601, nullable: false, desc: 平台入库时间（审计字段）}
+      - {name: source_run_id, type: string, unit: "-", nullable: false, desc: 采集批次标识（血缘与回溯字段）}
+
+  # ----------------------------------------------------------
+  # 2. 原始层：逐小时天气预报 / 实况
+  # ----------------------------------------------------------
+  - key: openmeteo.weather.forecast.hourly
+    name: 城市逐小时天气数据（预报与实况）
+    domain: weather
+    layer: raw
+    description: >-
+      Open-Meteo Forecast API 逐小时气象要素。融合了数值预报模式输出与
+      观测同化实况，过去时段为实况分析、未来时段为预报。是气象类分析的
+      基础事实资产。
+    business_definition: 城市 × 整点小时粒度的一条气象观测/预报记录。
+    owner: 气象数据组
+    steward: 气象数据管理员
+    source_system: Open-Meteo
+    source_product: Forecast API
+    source_endpoint: https://api.open-meteo.com/v1/forecast
+    source_doc: https://open-meteo.com/en/docs
+    license: CC-BY-4.0
+    granularity: hourly
+    update_frequency: hourly
+    sla_freshness_minutes: 120
+    sla_completeness: 0.98
+    sensitivity: public
+    status: active
+    tags: [气象, 时序, 逐小时, 事实表, 核心资产]
+    primary_key: [city_id, time]
+    time_column: time
+    partition_keys: [city_id, year, month]
+    columns:
+      - {name: city_id, type: string, unit: "-", nullable: false, pk: true, desc: 城市标识，外键指向城市主数据}
+      - {name: time, type: timestamp, unit: iso8601, nullable: false, pk: true, desc: 数据时间戳（城市本地时区整点）}
+      - {name: temperature_2m, type: double, unit: °C, nullable: false, range: [-90, 60], desc: 2 米气温}
+      - {name: relative_humidity_2m, type: double, unit: "%", nullable: false, range: [0, 100], desc: 2 米相对湿度}
+      - {name: dew_point_2m, type: double, unit: °C, nullable: false, range: [-90, 40], desc: 2 米露点温度}
+      - {name: apparent_temperature, type: double, unit: °C, nullable: false, range: [-90, 70], desc: 体感温度（含风寒/湿热修正）}
+      - {name: precipitation, type: double, unit: mm, nullable: false, range: [0, 500], desc: 总降水量（雨+雪，前 1 小时累计）}
+      - {name: rain, type: double, unit: mm, nullable: false, range: [0, 500], desc: 降雨量}
+      - {name: snowfall, type: double, unit: cm, nullable: false, range: [0, 200], desc: 降雪量}
+      - {name: precipitation_probability, type: double, unit: "%", nullable: true, range: [0, 100], desc: 降水概率（仅预报时段有值）}
+      - {name: weather_code, type: integer, unit: wmo, nullable: false, enum: [0,1,2,3,45,48,51,53,55,56,57,61,63,65,66,67,71,73,75,77,80,81,82,85,86,95,96,99], desc: WMO 天气现象代码}
+      - {name: cloud_cover, type: double, unit: "%", nullable: false, range: [0, 100], desc: 总云量}
+      - {name: pressure_msl, type: double, unit: hPa, nullable: false, range: [850, 1100], desc: 海平面气压}
+      - {name: surface_pressure, type: double, unit: hPa, nullable: false, range: [500, 1100], desc: 地面气压}
+      - {name: wind_speed_10m, type: double, unit: km/h, nullable: false, range: [0, 400], desc: 10 米风速}
+      - {name: wind_direction_10m, type: double, unit: "°", nullable: false, range: [0, 360], desc: 10 米风向（正北为 0°，顺时针）}
+      - {name: wind_gusts_10m, type: double, unit: km/h, nullable: false, range: [0, 500], desc: 10 米阵风风速}
+      - {name: is_day, type: integer, unit: "0/1", nullable: true, enum: [0, 1], desc: 是否为白昼}
+      - {name: visibility, type: double, unit: m, nullable: true, range: [0, 100000], desc: 能见度}
+      - {name: uv_index, type: double, unit: index, nullable: true, range: [0, 20], desc: 紫外线指数}
+      - {name: is_forecast, type: integer, unit: "0/1", nullable: false, enum: [0, 1], is_derived: true, desc: "平台派生：1 表示该时刻为预报值，0 表示实况分析值（按城市本地时间判定）"}
+      - {name: ingested_at, type: timestamp, unit: iso8601, nullable: false, desc: 平台入库时间（审计字段）}
+      - {name: source_run_id, type: string, unit: "-", nullable: false, desc: 采集批次标识（血缘与回溯字段）}
+
+  # ----------------------------------------------------------
+  # 3. 原始层：逐日天气预报
+  # ----------------------------------------------------------
+  - key: openmeteo.weather.forecast.daily
+    name: 城市逐日天气数据（预报与实况汇总）
+    domain: weather
+    layer: raw
+    description: >-
+      Open-Meteo Forecast API 逐日聚合气象要素，含最高最低气温、日照时长、
+      太阳辐射总量、ET0 参考蒸散量等日尺度指标。
+    business_definition: 城市 × 自然日粒度的一条气象日汇总记录。
+    owner: 气象数据组
+    steward: 气象数据管理员
+    source_system: Open-Meteo
+    source_product: Forecast API (daily)
+    source_endpoint: https://api.open-meteo.com/v1/forecast
+    source_doc: https://open-meteo.com/en/docs
+    license: CC-BY-4.0
+    granularity: daily
+    update_frequency: daily
+    sla_freshness_minutes: 1440
+    sla_completeness: 0.98
+    sensitivity: public
+    status: active
+    tags: [气象, 时序, 逐日, 事实表]
+    primary_key: [city_id, date]
+    time_column: date
+    partition_keys: [city_id, year, month]
+    columns:
+      - {name: city_id, type: string, unit: "-", nullable: false, pk: true, desc: 城市标识}
+      - {name: date, type: date, unit: iso8601, nullable: false, pk: true, desc: 数据日期（城市本地时区自然日）}
+      - {name: weather_code, type: integer, unit: wmo, nullable: false, enum: [0,1,2,3,45,48,51,53,55,56,57,61,63,65,66,67,71,73,75,77,80,81,82,85,86,95,96,99], desc: 当日主导 WMO 天气现象代码}
+      - {name: temperature_2m_max, type: double, unit: °C, nullable: false, range: [-90, 70], desc: 日最高气温}
+      - {name: temperature_2m_min, type: double, unit: °C, nullable: false, range: [-90, 70], desc: 日最低气温}
+      - {name: apparent_temperature_max, type: double, unit: °C, nullable: false, range: [-90, 70], desc: 日最高体感温度}
+      - {name: apparent_temperature_min, type: double, unit: °C, nullable: false, range: [-90, 70], desc: 日最低体感温度}
+      - {name: precipitation_sum, type: double, unit: mm, nullable: false, range: [0, 1000], desc: 日累计降水量}
+      - {name: rain_sum, type: double, unit: mm, nullable: false, range: [0, 1000], desc: 日累计降雨量}
+      - {name: snowfall_sum, type: double, unit: cm, nullable: false, range: [0, 500], desc: 日累计降雪量}
+      - {name: precipitation_hours, type: double, unit: h, nullable: false, range: [0, 24], desc: 降水持续小时数}
+      - {name: precipitation_probability_max, type: double, unit: "%", nullable: true, range: [0, 100], desc: 日最大降水概率}
+      - {name: wind_speed_10m_max, type: double, unit: km/h, nullable: false, range: [0, 400], desc: 日最大风速}
+      - {name: wind_gusts_10m_max, type: double, unit: km/h, nullable: false, range: [0, 500], desc: 日最大阵风}
+      - {name: wind_direction_10m_dominant, type: double, unit: "°", nullable: false, range: [0, 360], desc: 主导风向}
+      - {name: shortwave_radiation_sum, type: double, unit: MJ/m², nullable: false, range: [0, 50], desc: 日太阳短波辐射总量}
+      - {name: et0_fao_evapotranspiration, type: double, unit: mm, nullable: false, range: [0, 30], desc: FAO-56 参考蒸散量}
+      - {name: uv_index_max, type: double, unit: index, nullable: false, range: [0, 25], desc: 日最大紫外线指数}
+      - {name: sunshine_duration, type: double, unit: s, nullable: true, range: [0, 86400], desc: 日照时长}
+      - {name: daylight_duration, type: double, unit: s, nullable: true, range: [0, 86400], desc: 白昼时长}
+      - {name: ingested_at, type: timestamp, unit: iso8601, nullable: false, desc: 平台入库时间}
+      - {name: source_run_id, type: string, unit: "-", nullable: false, desc: 采集批次标识}
+
+  # ----------------------------------------------------------
+  # 4. 原始层：历史气象再分析归档
+  # ----------------------------------------------------------
+  - key: openmeteo.weather.archive.hourly
+    name: 城市历史气象归档数据（再分析）
+    domain: weather
+    layer: raw
+    description: >-
+      Open-Meteo Archive API 提供的 ERA5 再分析逐小时气象数据，覆盖 1940 年
+      至今，用于历史回溯、气候基准与趋势分析。与 forecast 资产口径同构但
+      时效滞后，二者在血缘上互补。
+    business_definition: 城市 × 整点小时粒度的历史再分析气象记录。
+    owner: 气象数据组
+    steward: 历史数据管理员
+    source_system: Open-Meteo
+    source_product: Archive API (ERA5)
+    source_endpoint: https://archive-api.open-meteo.com/v1/archive
+    source_doc: https://open-meteo.com/en/docs/historical-weather-api
+    license: CC-BY-4.0
+    granularity: hourly
+    update_frequency: daily
+    # ERA5 再分析存在约 5 天发布延迟，SLA 需覆盖该延迟加上平台自身的采集窗口
+    sla_freshness_minutes: 11520
+    sla_completeness: 0.95
+    sensitivity: public
+    status: active
+    tags: [气象, 时序, 逐小时, 历史归档, ERA5, 事实表]
+    primary_key: [city_id, time]
+    time_column: time
+    partition_keys: [city_id, year, month]
+    columns:
+      - {name: city_id, type: string, unit: "-", nullable: false, pk: true, desc: 城市标识}
+      - {name: time, type: timestamp, unit: iso8601, nullable: false, pk: true, desc: 数据时间戳（城市本地时区整点）}
+      - {name: temperature_2m, type: double, unit: °C, nullable: false, range: [-90, 60], desc: 2 米气温}
+      - {name: relative_humidity_2m, type: double, unit: "%", nullable: false, range: [0, 100], desc: 2 米相对湿度}
+      - {name: dew_point_2m, type: double, unit: °C, nullable: false, range: [-90, 40], desc: 2 米露点温度}
+      - {name: apparent_temperature, type: double, unit: °C, nullable: false, range: [-90, 70], desc: 体感温度}
+      - {name: precipitation, type: double, unit: mm, nullable: false, range: [0, 500], desc: 总降水量}
+      - {name: rain, type: double, unit: mm, nullable: false, range: [0, 500], desc: 降雨量}
+      - {name: snowfall, type: double, unit: cm, nullable: false, range: [0, 200], desc: 降雪量}
+      - {name: snow_depth, type: double, unit: m, nullable: true, range: [0, 10], desc: 积雪深度}
+      - {name: weather_code, type: integer, unit: wmo, nullable: false, enum: [0,1,2,3,45,48,51,53,55,56,57,61,63,65,66,67,71,73,75,77,80,81,82,85,86,95,96,99], desc: WMO 天气现象代码}
+      - {name: cloud_cover, type: double, unit: "%", nullable: false, range: [0, 100], desc: 总云量}
+      - {name: pressure_msl, type: double, unit: hPa, nullable: false, range: [850, 1100], desc: 海平面气压}
+      - {name: surface_pressure, type: double, unit: hPa, nullable: false, range: [500, 1100], desc: 地面气压}
+      - {name: wind_speed_10m, type: double, unit: km/h, nullable: false, range: [0, 400], desc: 10 米风速}
+      - {name: wind_direction_10m, type: double, unit: "°", nullable: false, range: [0, 360], desc: 10 米风向}
+      - {name: wind_gusts_10m, type: double, unit: km/h, nullable: false, range: [0, 500], desc: 10 米阵风}
+      - {name: shortwave_radiation, type: double, unit: W/m², nullable: false, range: [0, 1400], desc: 太阳短波辐射瞬时值}
+      - {name: et0_fao_evapotranspiration, type: double, unit: mm, nullable: false, range: [0, 5], desc: FAO-56 参考蒸散量}
+      - {name: ingested_at, type: timestamp, unit: iso8601, nullable: false, desc: 平台入库时间}
+      - {name: source_run_id, type: string, unit: "-", nullable: false, desc: 采集批次标识}
+
+  # ----------------------------------------------------------
+  # 5. 原始层：逐小时空气质量
+  # ----------------------------------------------------------
+  - key: openmeteo.air_quality.hourly
+    name: 城市逐小时空气质量数据
+    domain: air_quality
+    layer: raw
+    description: >-
+      Open-Meteo Air Quality API 逐小时空气污染物浓度与空气质量指数，数据源自
+      CAMS 全球/欧洲大气成分预报系统。包含 PM2.5、PM10、O₃、NO₂、SO₂、CO
+      等常规污染物、欧洲 AQI 与美国 AQI 双口径指数、紫外指数及花粉浓度。
+    business_definition: 城市 × 整点小时粒度的一条空气质量观测/预报记录。
+    owner: 环境数据组
+    steward: 空气质量数据管理员
+    source_system: Open-Meteo
+    source_product: Air Quality API (CAMS)
+    source_endpoint: https://air-quality-api.open-meteo.com/v1/air-quality
+    source_doc: https://open-meteo.com/en/docs/air-quality-api
+    license: CC-BY-4.0
+    granularity: hourly
+    update_frequency: hourly
+    sla_freshness_minutes: 180
+    sla_completeness: 0.95
+    sensitivity: public
+    status: active
+    tags: [空气质量, 环境, 时序, 逐小时, 事实表, 核心资产]
+    primary_key: [city_id, time]
+    time_column: time
+    partition_keys: [city_id, year, month]
+    columns:
+      - {name: city_id, type: string, unit: "-", nullable: false, pk: true, desc: 城市标识}
+      - {name: time, type: timestamp, unit: iso8601, nullable: false, pk: true, desc: 数据时间戳（城市本地时区整点）}
+      - {name: pm2_5, type: double, unit: μg/m³, nullable: true, range: [0, 2000], desc: 细颗粒物 PM2.5 浓度}
+      - {name: pm10, type: double, unit: μg/m³, nullable: true, range: [0, 3000], desc: 可吸入颗粒物 PM10 浓度}
+      - {name: carbon_monoxide, type: double, unit: μg/m³, nullable: true, range: [0, 60000], desc: 一氧化碳 CO 浓度}
+      - {name: nitrogen_dioxide, type: double, unit: μg/m³, nullable: true, range: [0, 2000], desc: 二氧化氮 NO₂ 浓度}
+      - {name: sulphur_dioxide, type: double, unit: μg/m³, nullable: true, range: [0, 3000], desc: 二氧化硫 SO₂ 浓度}
+      - {name: ozone, type: double, unit: μg/m³, nullable: true, range: [0, 1000], desc: 臭氧 O₃ 浓度}
+      - {name: ammonia, type: double, unit: μg/m³, nullable: true, range: [0, 2000], desc: 氨 NH₃ 浓度}
+      - {name: dust, type: double, unit: μg/m³, nullable: true, range: [0, 5000], desc: 沙尘浓度}
+      - {name: aerosol_optical_depth, type: double, unit: "-", nullable: true, range: [0, 5], desc: 气溶胶光学厚度}
+      - {name: uv_index, type: double, unit: index, nullable: true, range: [0, 20], desc: 紫外线指数}
+      - {name: uv_index_clear_sky, type: double, unit: index, nullable: true, range: [0, 25], desc: 晴空紫外线指数}
+      - {name: european_aqi, type: double, unit: EAQI, nullable: true, range: [0, 500], desc: 欧洲空气质量指数（综合）}
+      - {name: european_aqi_pm2_5, type: double, unit: EAQI, nullable: true, range: [0, 500], desc: 欧洲 AQI —— PM2.5 分项}
+      - {name: european_aqi_pm10, type: double, unit: EAQI, nullable: true, range: [0, 500], desc: 欧洲 AQI —— PM10 分项}
+      - {name: european_aqi_nitrogen_dioxide, type: double, unit: EAQI, nullable: true, range: [0, 500], desc: 欧洲 AQI —— NO₂ 分项}
+      - {name: european_aqi_ozone, type: double, unit: EAQI, nullable: true, range: [0, 500], desc: 欧洲 AQI —— O₃ 分项}
+      - {name: european_aqi_sulphur_dioxide, type: double, unit: EAQI, nullable: true, range: [0, 500], desc: 欧洲 AQI —— SO₂ 分项}
+      - {name: us_aqi, type: double, unit: USAQI, nullable: true, range: [0, 500], desc: 美国空气质量指数（综合）}
+      - {name: us_aqi_pm2_5, type: double, unit: USAQI, nullable: true, range: [0, 500], desc: 美国 AQI —— PM2.5 分项}
+      - {name: us_aqi_pm10, type: double, unit: USAQI, nullable: true, range: [0, 500], desc: 美国 AQI —— PM10 分项}
+      - {name: us_aqi_nitrogen_dioxide, type: double, unit: USAQI, nullable: true, range: [0, 500], desc: 美国 AQI —— NO₂ 分项}
+      - {name: us_aqi_ozone, type: double, unit: USAQI, nullable: true, range: [0, 500], desc: 美国 AQI —— O₃ 分项}
+      - {name: us_aqi_sulphur_dioxide, type: double, unit: USAQI, nullable: true, range: [0, 500], desc: 美国 AQI —— SO₂ 分项}
+      - {name: us_aqi_carbon_monoxide, type: double, unit: USAQI, nullable: true, range: [0, 500], desc: 美国 AQI —— CO 分项}
+      - {name: alder_pollen, type: double, unit: grains/m³, nullable: true, range: [0, 1000], desc: 桤木花粉浓度}
+      - {name: birch_pollen, type: double, unit: grains/m³, nullable: true, range: [0, 1000], desc: 桦木花粉浓度}
+      - {name: grass_pollen, type: double, unit: grains/m³, nullable: true, range: [0, 1000], desc: 禾本科花粉浓度}
+      - {name: mugwort_pollen, type: double, unit: grains/m³, nullable: true, range: [0, 1000], desc: 蒿属花粉浓度}
+      - {name: olive_pollen, type: double, unit: grains/m³, nullable: true, range: [0, 1000], desc: 橄榄花粉浓度}
+      - {name: ragweed_pollen, type: double, unit: grains/m³, nullable: true, range: [0, 1000], desc: 豚草花粉浓度}
+      - {name: ingested_at, type: timestamp, unit: iso8601, nullable: false, desc: 平台入库时间}
+      - {name: source_run_id, type: string, unit: "-", nullable: false, desc: 采集批次标识}
+
+  # ----------------------------------------------------------
+  # 6. 精炼层：城市环境融合宽表（天气 ⨝ 空气质量）
+  # ----------------------------------------------------------
+  - key: atmos.city_environment.hourly
+    name: 城市环境融合宽表（逐小时）
+    domain: integrated
+    layer: refined
+    description: >-
+      平台自建的衍生资产：以 (city_id, time) 为键，将逐小时天气与逐小时空气
+      质量左连接融合为统一分析口径，并派生空气质量等级、人体舒适度指数、
+      静稳指数与首要污染物等业务指标。气象列以预报资产为主、ERA5 归档兜底，
+      从而覆盖空气质量可达的完整历史窗口。是看板与对外服务的推荐入口。
+    business_definition: 城市 × 整点小时粒度的一条"气象+空气质量"联合环境记录。
+    owner: 数据平台组
+    steward: 指标体系管理员
+    source_system: 平台内部生产（ETL）
+    source_product: city_environment_hourly 作业
+    source_endpoint: internal://jobs/city_environment_hourly
+    source_doc: docs/ARCHITECTURE.md
+    license: CC-BY-4.0
+    granularity: hourly
+    update_frequency: hourly
+    sla_freshness_minutes: 240
+    sla_completeness: 0.95
+    sensitivity: public
+    status: active
+    tags: [融合资产, 派生指标, 逐小时, 服务入口]
+    primary_key: [city_id, time]
+    time_column: time
+    partition_keys: [city_id, year, month]
+    columns:
+      - {name: city_id, type: string, unit: "-", nullable: false, pk: true, desc: 城市标识}
+      - {name: time, type: timestamp, unit: iso8601, nullable: false, pk: true, desc: 数据时间戳（城市本地时区整点）}
+      - {name: temperature_2m, type: double, unit: °C, nullable: true, range: [-90, 60], desc: 2 米气温（上游：天气）}
+      - {name: apparent_temperature, type: double, unit: °C, nullable: true, range: [-90, 70], desc: 体感温度（上游：天气）}
+      - {name: relative_humidity_2m, type: double, unit: "%", nullable: true, range: [0, 100], desc: 相对湿度（上游：天气）}
+      - {name: precipitation, type: double, unit: mm, nullable: true, range: [0, 500], desc: 降水量（上游：天气）}
+      - {name: weather_code, type: integer, unit: wmo, nullable: true, desc: WMO 天气现象代码（上游：天气）}
+      - {name: cloud_cover, type: double, unit: "%", nullable: true, range: [0, 100], desc: 云量（上游：天气）}
+      - {name: pressure_msl, type: double, unit: hPa, nullable: true, range: [850, 1100], desc: 海平面气压（上游：天气）}
+      - {name: wind_speed_10m, type: double, unit: km/h, nullable: true, range: [0, 400], desc: 10 米风速（上游：天气）}
+      - {name: wind_direction_10m, type: double, unit: "°", nullable: true, range: [0, 360], desc: 10 米风向（上游：天气）}
+      - {name: pm2_5, type: double, unit: μg/m³, nullable: true, range: [0, 2000], desc: PM2.5 浓度（上游：空气质量）}
+      - {name: pm10, type: double, unit: μg/m³, nullable: true, range: [0, 3000], desc: PM10 浓度（上游：空气质量）}
+      - {name: ozone, type: double, unit: μg/m³, nullable: true, range: [0, 1000], desc: 臭氧浓度（上游：空气质量）}
+      - {name: nitrogen_dioxide, type: double, unit: μg/m³, nullable: true, range: [0, 2000], desc: 二氧化氮浓度（上游：空气质量）}
+      - {name: sulphur_dioxide, type: double, unit: μg/m³, nullable: true, range: [0, 3000], desc: 二氧化硫浓度（上游：空气质量）}
+      - {name: carbon_monoxide, type: double, unit: μg/m³, nullable: true, range: [0, 60000], desc: 一氧化碳浓度（上游：空气质量）}
+      - {name: european_aqi, type: double, unit: EAQI, nullable: true, range: [0, 500], desc: 欧洲空气质量指数（上游：空气质量）}
+      - {name: us_aqi, type: double, unit: USAQI, nullable: true, range: [0, 500], desc: 美国空气质量指数（上游：空气质量）}
+      - {name: china_aqi, type: double, unit: AQI, nullable: true, range: [0, 500], is_derived: true, desc: "派生：国标 AQI（GB 3095-2012），PM 用 24 小时滑动平均、O₃ 用 8 小时滑动平均计算"}
+      - {name: china_aqi_level, type: string, unit: "-", nullable: true, enum: [优, 良, 轻度污染, 中度污染, 重度污染, 严重污染], is_derived: true, desc: "派生：国标 AQI 等级（AQI≤50 优、≤100 良、≤150 轻度污染、≤200 中度污染、≤300 重度污染、>300 严重污染）"}
+      - {name: china_primary_pollutant, type: string, unit: "-", nullable: true, enum: [PM2.5, PM10, O₃, NO₂, SO₂, CO, 无], is_derived: true, desc: "派生：国标口径首要污染物（IAQI 最大且超过 50 者，否则记「无」）"}
+      - {name: aqi_level, type: string, unit: "-", nullable: true, enum: [优, 良, 轻度污染, 中度污染, 重度污染, 严重污染], desc: "派生：基于 european_aqi 的空气质量等级（中国 GB 3095 表述）"}
+      - {name: primary_pollutant, type: string, unit: "-", nullable: true, enum: [PM2.5, PM10, O₃, NO₂, SO₂, CO, 无], desc: 派生：IAQI 最大的首要污染物}
+      - {name: comfort_index, type: double, unit: index, nullable: true, range: [0, 100], desc: 派生：人体舒适度指数（温湿风综合）}
+      - {name: ventilation_index, type: double, unit: index, nullable: true, range: [0, 10000], desc: 派生：通风扩散指数（风速×混合层近似），越低越易污染物累积}
+      - {name: is_stagnant, type: integer, unit: "0/1", nullable: true, enum: [0, 1], desc: 派生：静稳天气标志（低风速且无降水）}
+      - {name: is_forecast, type: integer, unit: "0/1", nullable: true, enum: [0, 1], desc: "实况/预报标志（来自天气资产）：1 为预报值，0 为实况分析值"}
+      - {name: ingested_at, type: timestamp, unit: iso8601, nullable: true, desc: 平台入库时间}
+      - {name: source_run_id, type: string, unit: "-", nullable: true, desc: 采集批次标识}
+
+  # ----------------------------------------------------------
+  # 7. 服务层：城市环境日汇总
+  # ----------------------------------------------------------
+  - key: atmos.city_environment.daily
+    name: 城市环境日汇总指标
+    domain: integrated
+    layer: serving
+    description: >-
+      面向看板与报表的服务层资产：由逐小时融合宽表按城市×自然日聚合，输出
+      日均/极值气象指标、AQI 均值与峰值、优良天数标志、超标小时数等考核口径。
+    business_definition: 城市 × 自然日粒度的一条环境质量考核记录。
+    owner: 数据平台组
+    steward: 指标体系管理员
+    source_system: 平台内部生产（ETL）
+    source_product: city_environment_daily 作业
+    source_endpoint: internal://jobs/city_environment_daily
+    source_doc: docs/ARCHITECTURE.md
+    license: CC-BY-4.0
+    granularity: daily
+    update_frequency: daily
+    sla_freshness_minutes: 720
+    sla_completeness: 0.93
+    sensitivity: public
+    status: active
+    tags: [服务层, 日汇总, 考核口径, 看板数据源]
+    primary_key: [city_id, date]
+    time_column: date
+    partition_keys: [city_id, year, month]
+    columns:
+      - {name: city_id, type: string, unit: "-", nullable: false, pk: true, desc: 城市标识}
+      - {name: date, type: date, unit: iso8601, nullable: false, pk: true, desc: 数据日期}
+      - {name: temp_avg, type: double, unit: °C, nullable: true, range: [-90, 70], desc: 日均气温}
+      - {name: temp_max, type: double, unit: °C, nullable: true, range: [-90, 70], desc: 日最高气温}
+      - {name: temp_min, type: double, unit: °C, nullable: true, range: [-90, 70], desc: 日最低气温}
+      - {name: humidity_avg, type: double, unit: "%", nullable: true, range: [0, 100], desc: 日均相对湿度}
+      - {name: precipitation_sum, type: double, unit: mm, nullable: true, range: [0, 2000], desc: 日累计降水量}
+      - {name: wind_speed_avg, type: double, unit: km/h, nullable: true, range: [0, 400], desc: 日均风速}
+      - {name: pressure_avg, type: double, unit: hPa, nullable: true, range: [850, 1100], desc: 日均海平面气压}
+      - {name: aqi_avg, type: double, unit: EAQI, nullable: true, range: [0, 500], desc: 日均欧洲空气质量指数}
+      - {name: aqi_max, type: double, unit: EAQI, nullable: true, range: [0, 500], desc: 日峰值欧洲空气质量指数}
+      - {name: china_aqi, type: double, unit: AQI, nullable: true, range: [0, 500], desc: "国标日 AQI（依据当日 24 小时平均浓度计算，HJ 633-2012 规定方法，与官方考核口径可比）"}
+      - {name: china_aqi_level, type: string, unit: "-", nullable: true, enum: [优, 良, 轻度污染, 中度污染, 重度污染, 严重污染], desc: 国标日 AQI 对应等级}
+      - {name: china_primary_pollutant, type: string, unit: "-", nullable: true, enum: [PM2.5, PM10, O₃, NO₂, SO₂, CO, 无], desc: 国标口径首要污染物}
+      - {name: pm2_5_avg, type: double, unit: μg/m³, nullable: true, range: [0, 2000], desc: 日均 PM2.5 浓度（国标日 AQI 的输入）}
+      - {name: pm10_avg, type: double, unit: μg/m³, nullable: true, range: [0, 3000], desc: 日均 PM10 浓度（国标日 AQI 的输入）}
+      - {name: ozone_8h_max, type: double, unit: μg/m³, nullable: true, range: [0, 1000], desc: 日最大 8 小时滑动平均臭氧浓度（国标日 AQI 的输入）}
+      - {name: nitrogen_dioxide_avg, type: double, unit: μg/m³, nullable: true, range: [0, 2000], desc: 日均二氧化氮浓度}
+      - {name: sulphur_dioxide_avg, type: double, unit: μg/m³, nullable: true, range: [0, 3000], desc: 日均二氧化硫浓度}
+      - {name: carbon_monoxide_avg, type: double, unit: μg/m³, nullable: true, range: [0, 60000], desc: 日均一氧化碳浓度}
+      - {name: dominant_aqi_level, type: string, unit: "-", nullable: true, enum: [优, 良, 轻度污染, 中度污染, 重度污染, 严重污染], desc: 当日主导空气质量等级（按欧洲 AQI 峰值判定）}
+      - {name: good_air_day, type: integer, unit: "0/1", nullable: true, enum: [0, 1], desc: "是否空气质量优良日（国标日 AQI ≤ 100）"}
+      - {name: exceed_hours, type: integer, unit: h, nullable: true, range: [0, 24], desc: "空气质量超标小时数（欧洲 AQI > 40，用于小时级过程识别）"}
+      - {name: stagnant_hours, type: integer, unit: h, nullable: true, range: [0, 24], desc: 静稳天气小时数}
+      - {name: obs_hours, type: integer, unit: h, nullable: true, range: [0, 24], desc: 实际有效观测小时数（质量口径）}
+      - {name: ingested_at, type: timestamp, unit: iso8601, nullable: true, desc: 平台入库时间}
+      - {name: source_run_id, type: string, unit: "-", nullable: true, desc: 采集批次标识}
+
+
+# ============================================================
+# 血缘关系（上游 → 下游）
+# bootstrap 时写入 lineage_edges，并与作业实现保持一致。
+# transform_type: derive | join | aggregate | enrich | reference
+# ============================================================
+lineage:
+  - upstream: openmeteo.geocoding.places
+    downstream: openmeteo.weather.forecast.hourly
+    transform_type: reference
+    transform_ref: collect_weather_forecast
+    description: 以城市主数据解析出的 WGS84 坐标与时区作为 API 请求参数，确定数据点的空间与时间口径。
+
+  - upstream: openmeteo.geocoding.places
+    downstream: openmeteo.air_quality.hourly
+    transform_type: reference
+    transform_ref: collect_air_quality
+    description: 复用城市主数据坐标与时区，保证空气质量与气象数据在同一空间点位上可比。
+
+  - upstream: openmeteo.geocoding.places
+    downstream: openmeteo.weather.forecast.daily
+    transform_type: reference
+    transform_ref: collect_weather_daily
+    description: 逐日资产同样以城市主数据解析出的 WGS84 坐标与时区作为请求参数，保证与逐小时资产空间口径一致。
+
+  - upstream: openmeteo.geocoding.places
+    downstream: openmeteo.weather.archive.hourly
+    transform_type: reference
+    transform_ref: collect_weather_archive
+    description: 历史归档同样以城市主数据坐标为准，确保与实时资产口径一致。
+
+  - upstream: openmeteo.weather.forecast.hourly
+    downstream: atmos.city_environment.hourly
+    transform_type: join
+    transform_ref: build_city_environment_hourly
+    description: 以 (city_id, time) 为键与空气质量数据做全外连接，形成气象要素列组；两侧任一存在记录即保留。
+
+  - upstream: openmeteo.air_quality.hourly
+    downstream: atmos.city_environment.hourly
+    transform_type: join
+    transform_ref: build_city_environment_hourly
+    description: 以 (city_id, time) 为键与天气数据做全外连接，形成污染物与 AQI 列组；并派生空气质量等级与首要污染物。
+
+  - upstream: openmeteo.weather.archive.hourly
+    downstream: atmos.city_environment.hourly
+    transform_type: enrich
+    transform_ref: build_city_environment_hourly
+    description: >-
+      作为历史气象来源补齐天气预报覆盖不到的时段（预报仅 9 天，空气质量可回溯 92 天）。
+      同一时刻以预报侧为准、归档侧兜底，否则融合宽表在历史上会有九成以上行缺失风速与降水。
+
+  - upstream: atmos.city_environment.hourly
+    downstream: atmos.city_environment.daily
+    transform_type: aggregate
+    transform_ref: build_city_environment_daily
+    description: 按 (city_id, 自然日) 聚合均值/极值，派生优良天、超标小时数与静稳小时数等考核口径。

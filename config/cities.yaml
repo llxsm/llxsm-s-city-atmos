@@ -1,0 +1,230 @@
+# ============================================================
+# 城市主数据清单 —— 平台监测对象的权威来源 (System of Record)
+# 采集范围、资产分区、质量校验均以此为准。
+# 坐标使用 WGS84，与 Open-Meteo 请求参数一致。
+# ============================================================
+
+- slug: beijing
+  name_zh: 北京
+  name_en: Beijing
+  country: 中国
+  country_code: CN
+  admin1: 北京市
+  latitude: 39.9042
+  longitude: 116.4074
+  timezone: Asia/Shanghai
+  elevation: 44
+  population: 21540000
+  climate_zone: 温带季风气候
+  is_active: true
+  tags: [首都, 超大城市, 华北]
+
+- slug: shanghai
+  name_zh: 上海
+  name_en: Shanghai
+  country: 中国
+  country_code: CN
+  admin1: 上海市
+  latitude: 31.2304
+  longitude: 121.4737
+  timezone: Asia/Shanghai
+  elevation: 4
+  population: 24870000
+  climate_zone: 亚热带季风气候
+  is_active: true
+  tags: [直辖市, 超大城市, 华东, 沿海]
+
+- slug: guangzhou
+  name_zh: 广州
+  name_en: Guangzhou
+  country: 中国
+  country_code: CN
+  admin1: 广东省
+  latitude: 23.1291
+  longitude: 113.2644
+  timezone: Asia/Shanghai
+  elevation: 21
+  population: 18730000
+  climate_zone: 亚热带季风气候
+  is_active: true
+  tags: [省会, 超大城市, 华南]
+
+- slug: shenzhen
+  name_zh: 深圳
+  name_en: Shenzhen
+  country: 中国
+  country_code: CN
+  admin1: 广东省
+  latitude: 22.5431
+  longitude: 114.0579
+  timezone: Asia/Shanghai
+  elevation: 6
+  population: 17660000
+  climate_zone: 亚热带季风气候
+  is_active: true
+  tags: [计划单列市, 超大城市, 华南, 沿海]
+
+- slug: chengdu
+  name_zh: 成都
+  name_en: Chengdu
+  country: 中国
+  country_code: CN
+  admin1: 四川省
+  latitude: 30.5728
+  longitude: 104.0668
+  timezone: Asia/Shanghai
+  elevation: 500
+  population: 21270000
+  climate_zone: 亚热带湿润季风气候
+  is_active: true
+  tags: [省会, 超大城市, 西南, 盆地]
+
+- slug: chongqing
+  name_zh: 重庆
+  name_en: Chongqing
+  country: 中国
+  country_code: CN
+  admin1: 重庆市
+  latitude: 29.5630
+  longitude: 106.5516
+  timezone: Asia/Shanghai
+  elevation: 244
+  population: 32130000
+  climate_zone: 亚热带季风气候
+  is_active: true
+  tags: [直辖市, 超大城市, 西南, 盆地]
+
+- slug: hangzhou
+  name_zh: 杭州
+  name_en: Hangzhou
+  country: 中国
+  country_code: CN
+  admin1: 浙江省
+  latitude: 30.2741
+  longitude: 120.1551
+  timezone: Asia/Shanghai
+  elevation: 19
+  population: 12370000
+  climate_zone: 亚热带季风气候
+  is_active: true
+  tags: [省会, 特大城市, 华东]
+
+- slug: nanjing
+  name_zh: 南京
+  name_en: Nanjing
+  country: 中国
+  country_code: CN
+  admin1: 江苏省
+  latitude: 32.0603
+  longitude: 118.7969
+  timezone: Asia/Shanghai
+  elevation: 22
+  population: 9490000
+  climate_zone: 亚热带季风气候
+  is_active: true
+  tags: [省会, 特大城市, 华东]
+
+- slug: wuhan
+  name_zh: 武汉
+  name_en: Wuhan
+  country: 中国
+  country_code: CN
+  admin1: 湖北省
+  latitude: 30.5928
+  longitude: 114.3055
+  timezone: Asia/Shanghai
+  elevation: 37
+  population: 13740000
+  climate_zone: 亚热带季风气候
+  is_active: true
+  tags: [省会, 特大城市, 华中]
+
+- slug: xian
+  name_zh: 西安
+  name_en: Xi'an
+  country: 中国
+  country_code: CN
+  admin1: 陕西省
+  latitude: 34.3416
+  longitude: 108.9398
+  timezone: Asia/Shanghai
+  elevation: 405
+  population: 13000000
+  climate_zone: 温带半湿润季风气候
+  is_active: true
+  tags: [省会, 特大城市, 西北]
+
+- slug: tianjin
+  name_zh: 天津
+  name_en: Tianjin
+  country: 中国
+  country_code: CN
+  admin1: 天津市
+  latitude: 39.3434
+  longitude: 117.3616
+  timezone: Asia/Shanghai
+  elevation: 5
+  population: 13630000
+  climate_zone: 温带季风气候
+  is_active: true
+  tags: [直辖市, 超大城市, 华北, 沿海]
+
+- slug: shenyang
+  name_zh: 沈阳
+  name_en: Shenyang
+  country: 中国
+  country_code: CN
+  admin1: 辽宁省
+  latitude: 41.8057
+  longitude: 123.4315
+  timezone: Asia/Shanghai
+  elevation: 55
+  population: 9100000
+  climate_zone: 温带季风气候
+  is_active: true
+  tags: [省会, 特大城市, 东北]
+
+- slug: urumqi
+  name_zh: 乌鲁木齐
+  name_en: Urumqi
+  country: 中国
+  country_code: CN
+  admin1: 新疆维吾尔自治区
+  latitude: 43.8256
+  longitude: 87.6168
+  timezone: Asia/Shanghai
+  elevation: 918
+  population: 4080000
+  climate_zone: 温带大陆性干旱气候
+  is_active: true
+  tags: [省会, 西北, 内陆]
+
+- slug: lhasa
+  name_zh: 拉萨
+  name_en: Lhasa
+  country: 中国
+  country_code: CN
+  admin1: 西藏自治区
+  latitude: 29.6520
+  longitude: 91.1721
+  timezone: Asia/Shanghai
+  elevation: 3650
+  population: 870000
+  climate_zone: 高原温带半干旱气候
+  is_active: true
+  tags: [省会, 西南, 高原]
+
+- slug: haikou
+  name_zh: 海口
+  name_en: Haikou
+  country: 中国
+  country_code: CN
+  admin1: 海南省
+  latitude: 20.0444
+  longitude: 110.1999
+  timezone: Asia/Shanghai
+  elevation: 15
+  population: 2940000
+  climate_zone: 热带季风气候
+  is_active: true
+  tags: [省会, 华南, 沿海, 热带]

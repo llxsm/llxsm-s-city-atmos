@@ -1,0 +1,214 @@
+# ============================================================
+# 数据质量规则目录 (Data Quality Rule Catalog)
+# ------------------------------------------------------------
+# 平台采用五维质量模型对每一项数据资产评分：
+#   完整性 completeness / 时效性 timeliness / 有效性 validity
+#   一致性 consistency / 唯一性 uniqueness
+#
+# 综合得分 = Σ(维度得分 × 权重)，按 grading 映射为 A/B/C/D 等级。
+# 每个 check 由 atmos.quality.engine 中的同名实现执行；
+# 规则参数在此集中配置，调整口径无需改动代码。
+# ============================================================
+
+model:
+  version: "1.0"
+  description: 五维数据质量评分模型（0-100 分制）
+
+# ---------- 维度权重 ----------
+dimensions:
+  - key: completeness
+    name: 完整性
+    weight: 0.28
+    description: 应有数据是否齐全 —— 时间覆盖完整度、关键字段空值率。
+  - key: timeliness
+    name: 时效性
+    weight: 0.20
+    description: 数据是否按 SLA 及时到达 —— 最新数据延迟、采集运行成功率。
+  - key: validity
+    name: 有效性
+    weight: 0.24
+    description: 取值是否符合物理与业务值域 —— 越界、非法枚举、类型异常。
+  - key: consistency
+    name: 一致性
+    weight: 0.18
+    description: 跨字段与跨资产的逻辑自洽 —— 派生指标与原始量纲是否吻合。
+  - key: uniqueness
+    name: 唯一性
+    weight: 0.10
+    description: 主键是否唯一 —— 重复记录率。
+
+# ---------- 等级映射（按综合分降序匹配首个满足项） ----------
+grading:
+  - { min_score: 95, grade: A, label: 优秀, color: "#16a34a" }
+  - { min_score: 85, grade: B, label: 良好, color: "#65a30d" }
+  - { min_score: 75, grade: C, label: 关注, color: "#f59e0b" }
+  - { min_score: 60, grade: D, label: 较差, color: "#ea580c" }
+  - { min_score: 0,  grade: E, label: 待治理, color: "#dc2626" }
+
+# ---------- 评测默认参数 ----------
+defaults:
+  # 质量评测回溯窗口（小时），超窗数据不参与时效性判定
+  evaluation_window_hours: 168
+  # 空值率可接受阈值
+  null_rate_warn: 0.05
+  null_rate_fail: 0.20
+  # 时间覆盖达标线
+  coverage_warn: 0.95
+  coverage_fail: 0.85
+  # 重复率阈值
+  duplicate_warn: 0.001
+  duplicate_fail: 0.01
+  # 越界比例阈值
+  outlier_warn: 0.01
+  outlier_fail: 0.05
+  # 一致性违反比例阈值
+  inconsistency_warn: 0.02
+  inconsistency_fail: 0.10
+
+# ---------- 检查项 ----------
+checks:
+
+  # ===== 完整性 =====
+  - key: completeness.time_coverage
+    name: 时间覆盖完整度
+    dimension: completeness
+    severity: critical
+    applies_to: ["*"]
+    description: >-
+      覆盖率窗口内实际存在的 (city_id, time) 记录数与该粒度应有记录数之比。
+      逐小时资产按小时数、逐日资产按天数计算期望值。
+      anchor_hours_by_asset 声明窗口相对"当前时刻"的整体偏移：负值表示数据源存在
+      发布延迟（ERA5 归档滞后约 5 天），正值表示该资产包含预报时段（应把窗口前移
+      到未来，否则会因"没有历史"被误判为缺失）。
+      span_hours_by_asset 覆盖窗口长度，默认为评测窗口。
+    params:
+      min_score: 0
+      anchor_hours_by_asset:
+        openmeteo.weather.archive.hourly: -120
+        openmeteo.weather.forecast.hourly: 168
+        openmeteo.weather.forecast.daily: 168
+        openmeteo.air_quality.hourly: 168
+        atmos.city_environment.hourly: 168
+        atmos.city_environment.daily: 168
+      span_hours_by_asset:
+        openmeteo.weather.forecast.hourly: 216
+        atmos.city_environment.hourly: 216
+        openmeteo.air_quality.hourly: 216
+
+  - key: completeness.null_rate
+    name: 关键字段空值率
+    dimension: completeness
+    severity: major
+    applies_to: ["*"]
+    description: >-
+      统计非空率最低的 N 个关键字段（排除预报时段天然为空的可空字段），
+      取加权平均作为维度得分。字段是否关键由资产字段字典 nullable 标志决定。
+
+  - key: completeness.obs_hours
+    name: 日均有效观测小时数
+    dimension: completeness
+    severity: minor
+    applies_to: ["atmos.city_environment.daily"]
+    description: 日汇总资产中 obs_hours 应接近 24，反映当日样本充足程度。
+    params:
+      ideal_hours: 24
+      min_acceptable_hours: 20
+
+  # ===== 时效性 =====
+  - key: timeliness.freshness
+    name: 数据新鲜度（对标 SLA）
+    dimension: timeliness
+    severity: critical
+    applies_to: ["*"]
+    description: >-
+      最新数据时间戳距当前时刻的延迟，与资产声明的 sla_freshness_minutes 比较。
+      延迟 ≤ SLA 记满分；每超出 SLA 一个周期扣分，超出 3 个周期记 0 分。
+    params:
+      grace_factor: 1.0
+      zero_score_factor: 3.0
+
+  - key: timeliness.run_success_rate
+    name: 采集运行成功率
+    dimension: timeliness
+    severity: major
+    applies_to: ["*"]
+    description: 近 24 小时内该资产的采集作业成功批次数占比，反映管道稳定性。
+    params:
+      window_hours: 24
+      min_runs: 1
+
+  # ===== 有效性 =====
+  - key: validity.range
+    name: 数值值域合规性
+    dimension: validity
+    severity: major
+    applies_to: ["*"]
+    description: >-
+      依据字段字典中声明的 range 进行越界检测（NaN 不计入越界）。
+      取各字段合规率的加权平均。
+    params:
+      include_columns: null      # null 表示使用字段字典中全部带 range 的字段
+
+  - key: validity.enum
+    name: 枚举值合法性
+    dimension: validity
+    severity: minor
+    applies_to: ["*"]
+    description: 依据字段字典中声明的 enum 校验离散取值合法性（如 WMO 天气代码）。
+
+  - key: validity.type_conformance
+    name: 数据类型一致性
+    dimension: validity
+    severity: minor
+    applies_to: ["*"]
+    description: 实际落库的 Arrow 数据类型与字段字典声明类型是否一致（防止上游改版静默破坏）。
+
+  # ===== 一致性 =====
+  - key: consistency.pm25_le_pm10
+    name: PM2.5 不超过 PM10
+    dimension: consistency
+    severity: critical
+    applies_to: ["openmeteo.air_quality.hourly", "atmos.city_environment.hourly"]
+    description: 物理约束 —— PM2.5 是 PM10 的子集，浓度不应显著大于 PM10。
+    params:
+      tolerance_ratio: 1.05
+
+  - key: consistency.aqi_matches_level
+    name: AQI 等级与指数自洽
+    dimension: consistency
+    severity: major
+    applies_to: ["atmos.city_environment.hourly", "atmos.city_environment.daily"]
+    description: 派生的 aqi_level / dominant_aqi_level 必须与 AQI 数值落在同一分级区间内。
+
+  - key: consistency.apparent_temp_deviation
+    name: 体感温度偏差合理
+    dimension: consistency
+    severity: minor
+    applies_to: ["openmeteo.weather.forecast.hourly", "openmeteo.weather.archive.hourly", "atmos.city_environment.hourly"]
+    description: 体感温度与实测气温之差不应超过物理合理上限（默认 25°C）。
+    params:
+      max_deviation_c: 25.0
+
+  - key: consistency.daily_extremes
+    name: 日极值序关系
+    dimension: consistency
+    severity: major
+    applies_to: ["openmeteo.weather.forecast.daily", "atmos.city_environment.daily"]
+    description: 日最低值必须不大于日最高值（温度、体感温度）。
+
+  - key: consistency.rain_le_precipitation
+    name: 降雨量不超过总降水量
+    dimension: consistency
+    severity: major
+    applies_to: ["openmeteo.weather.forecast.hourly", "openmeteo.weather.archive.hourly", "openmeteo.weather.forecast.daily"]
+    description: 总降水量 = 雨 + 雪（水当量），故 rain 分量不应大于 precipitation。
+    params:
+      tolerance_mm: 0.1
+
+  # ===== 唯一性 =====
+  - key: uniqueness.primary_key
+    name: 主键唯一性
+    dimension: uniqueness
+    severity: critical
+    applies_to: ["*"]
+    description: 按资产声明的主键（city_id + 时间列）检测重复记录，重复率应接近 0。

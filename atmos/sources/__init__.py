@@ -1,0 +1,49 @@
+"""数据源接入层。"""
+
+from atmos.sources.openmeteo import (
+    FetchRequest,
+    FetchResult,
+    OpenMeteoClient,
+    local_now,
+    make_request,
+)
+from atmos.sources.specs import (
+    AIR_QUALITY_HOURLY_VARIABLES,
+    ALL_ASSET_KEYS,
+    ARCHIVE_HOURLY_VARIABLES,
+    ARCHIVE_PUBLICATION_LAG_DAYS,
+    ASSET_AIR_QUALITY_HOURLY,
+    ASSET_ARCHIVE_HOURLY,
+    ASSET_ENVIRONMENT_DAILY,
+    ASSET_ENVIRONMENT_HOURLY,
+    ASSET_FORECAST_DAILY,
+    ASSET_FORECAST_HOURLY,
+    ASSET_GEOCODING_PLACES,
+    PLATFORM_COLUMNS,
+    VARIABLES_BY_ASSET,
+    WEATHER_DAILY_VARIABLES,
+    WEATHER_HOURLY_VARIABLES,
+)
+
+__all__ = [
+    "OpenMeteoClient",
+    "FetchRequest",
+    "FetchResult",
+    "make_request",
+    "local_now",
+    "WEATHER_HOURLY_VARIABLES",
+    "WEATHER_DAILY_VARIABLES",
+    "ARCHIVE_HOURLY_VARIABLES",
+    "AIR_QUALITY_HOURLY_VARIABLES",
+    "ARCHIVE_PUBLICATION_LAG_DAYS",
+    "PLATFORM_COLUMNS",
+    "VARIABLES_BY_ASSET",
+    "ALL_ASSET_KEYS",
+    "ASSET_FORECAST_HOURLY",
+    "ASSET_FORECAST_DAILY",
+    "ASSET_ARCHIVE_HOURLY",
+    "ASSET_AIR_QUALITY_HOURLY",
+    "ASSET_GEOCODING_PLACES",
+    "ASSET_ENVIRONMENT_HOURLY",
+    "ASSET_ENVIRONMENT_DAILY",
+]

@@ -1,0 +1,27 @@
+# 统一按 LF 存储，避免 Windows 开发 / Linux 部署之间的换行符churn
+* text=auto eol=lf
+
+# Windows 批处理必须保持 CRLF，否则 cmd.exe 解析可能出错
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# 二进制文件不要做文本转换
+*.parquet binary
+*.db binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff2 binary
+
+# 让 GitHub 语言统计不把前端静态资源算错
+*.js linguist-detectable=true
+*.css linguist-detectable=true
+*.html linguist-detectable=true
+
+# 生成物与文档不计入语言统计
+README.md linguist-documentation
+web/README.md linguist-documentation
+config/*.yaml linguist-detectable=false

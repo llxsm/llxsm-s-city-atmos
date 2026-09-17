@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- 标题由 /shared/portal.js 按当前门户改写；这里是脚本执行前的占位 -->
+<title>城市环境数据平台</title>
+<meta name="description" content="城市环境数据分析与数据资产治理的统一入口：实时实况、历史趋势、统计分布、污染过程、成因分析、达标考核、城市聚类，以及资产目录、数据血缘、质量评分与运行审计。" />
+<link rel="stylesheet" href="/shared/style.css" />
+<!-- 图表库走 CDN；若加载失败，charts.js 会在图表位置给出内联提示而不是抛错 -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+<!-- 运行时注入：当前服务托管哪个门户 + 两个后端的浏览器可达地址（必须早于 portal.js） -->
+<script src="/portal-config.js"></script>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark" id="brandMark" aria-hidden="true">AN</div>
+      <div class="brand-text">
+        <strong id="brandTitle">城市环境数据平台</strong>
+        <span id="brandSub"></span>
+      </div>
+    </div>
+
+    <!-- 导航由 /shared/portal.js 依据 /static/portal.config.js 按当前门户生成 -->
+    <nav class="nav" id="nav" aria-label="主导航"></nav>
+
+    <div class="sidebar-foot">
+      <div class="task-dock" id="taskDock" hidden>
+        <div class="task-dock-head">
+          <span>后台任务</span>
+          <span class="badge badge-accent" id="taskDockCount">0</span>
+        </div>
+        <div class="task-dock-body" id="taskDockBody"></div>
+      </div>
+      <dl class="meta-list" id="sidebarMeta"></dl>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="pageTitle">城市环境数据平台</h1>
+        <p class="page-subtitle" id="pageSubtitle"></p>
+      </div>
+      <div class="topbar-right">
+        <!-- 门户切换器：一次点击切换整个侧边导航与内容区，不刷新页面 -->
+        <div class="seg" id="portalSwitch" role="group" aria-label="平台切换"></div>
+        <div class="health" id="healthChip" title="接口连通状态">
+          <span class="dot dot-idle" id="healthDot"></span>
+          <span id="healthText">正在检测服务状态</span>
+        </div>
+        <button class="btn btn-ghost" id="refreshBtn" type="button" title="重新加载当前视图">刷新</button>
+      </div>
+    </header>
+
+    <div class="banner-stack" id="bannerStack"></div>
+
+    <main class="view" id="view" role="main" aria-live="polite"></main>
+
+    <footer class="foot">
+      <span id="footLeft">城市环境数据平台</span>
+      <span id="footRight"></span>
+    </footer>
+  </div>
+</div>
+
+<div class="drawer-root" id="drawerRoot" hidden></div>
+<div class="toast-root" id="toastRoot" aria-live="polite"></div>
+
+<script type="module" src="/shared/portal.js"></script>
+<script type="module" src="/static/portal.config.js"></script>
+</body>
+</html>
