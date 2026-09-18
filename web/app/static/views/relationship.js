@@ -444,7 +444,7 @@ function renderPair(panel, payload, ctx) {
           { empty: '暂无可分箱样本' },
         ), { subtitle: '分箱均值比散点更能看清趋势方向；均值与中位数差异大时提示箱内存在偏态或极端值。' })
       : null,
-  ).filter(Boolean);
+  ].filter(Boolean);
 
   const citySection = renderCitySection(payload);
 

@@ -71,6 +71,29 @@ def register_error_handlers(app: FastAPI) -> None:
         )
 
 
+def register_frontend_cache(app: FastAPI) -> None:
+    """给无构建步骤的前端资源加上"先校验、再使用"的缓存策略。
+
+    前端文件名没有内容哈希，而 ``StaticFiles`` 只发 ETag / Last-Modified、
+    不发 ``Cache-Control``。此时浏览器会按 RFC 9111 的启发式规则（以
+    ``Last-Modified`` 推算新鲜期）**直接复用**缓存里的旧模块，于是出现
+    "源码已经改好、页面仍报旧错误"的假象；动态 ``import()`` 又不遵循强制刷新，
+    用户按 Ctrl+F5 也未必能拿到新模块。
+
+    统一标成 ``no-cache``：仍然允许缓存，但每次使用前必须先带 ETag 校验，
+    内容未变时只是一次 304，代价可忽略。
+    （``/portal-config.js`` 是运行时注入的，因此用 ``no-store``，见下。）
+    """
+
+    @app.middleware("http")
+    async def frontend_revalidate(request: Request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if path == "/" or path.endswith("/index.html") or path.startswith(("/shared/", "/static/")):
+            response.headers.setdefault("Cache-Control", "no-cache")
+        return response
+
+
 def register_frontend(app: FastAPI, settings: Settings, portal: str) -> None:
     """挂载共享资源、统一前端与运行时门户配置。
 
@@ -177,6 +200,7 @@ def build_app(
 
     _register_api_fallback(app)
     register_error_handlers(app)
+    register_frontend_cache(app)
     register_frontend(app, settings, portal)
     return app
 
@@ -208,4 +232,10 @@ def _register_api_fallback(app: FastAPI) -> None:
         )
 
 
-__all__ = ["build_app", "portal_lifespan", "register_error_handlers", "register_frontend"]
+__all__ = [
+    "build_app",
+    "portal_lifespan",
+    "register_error_handlers",
+    "register_frontend",
+    "register_frontend_cache",
+]

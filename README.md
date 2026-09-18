@@ -435,7 +435,7 @@ POST /api/ops/bootstrap  /api/ops/refresh
 ## 测试
 
 ```bash
-pytest                    # 全部 264 项测试
+pytest                    # 全部 275 项测试
 pytest -v
 pytest tests/test_insights.py -k episodes
 ```
@@ -451,14 +451,20 @@ pytest tests/test_insights.py -k episodes
 | `test_insights.py` | **数值算法**（相关/回归/异常/KMeans 可复现性）+ **六大分析能力**（刻意造一次 6 小时污染过程，验证起止与峰值识别正确） |
 | `test_analysis_api.py` | 分析平台接口、空库降级、导出、**反向边界（治理接口不应存在）** |
 | `test_governance_api.py` | 治理平台接口、目录与血缘与质量、**反向边界（分析接口不应存在）** |
-| `test_portals.py` | **两平台协作**：共享状态、停用城市跨平台同步、接口集合互不重叠、`/portal-config.js` 身份注入 |
+| `test_portals.py` | **两平台协作**：共享状态、停用城市跨平台同步、接口集合互不重叠、`/portal-config.js` 身份注入、前端资源的缓存策略 |
 | `test_frontend_contract.py` | 统一前端：**每个门户的视图只调用自己那台服务的接口**、门户映射从配置解析、加载顺序、后端不可用时的降级 |
+| `test_frontend_syntax.py` | 前端**语法与模块图**：每个 JS 按 ESM 解析、每个视图可真正 import 且导出 `render`（需 node，缺失则跳过） |
 
 **测试策略**
 
 - **合并前端后新增的边界**：`test_frontend_contract.py` 从 `portal.config.js` 解析出
   门户→视图映射，逐个断言"某门户的视图只能调用该门户那台服务上存在的接口" ——
   一个页面同时能访问两个后端时，"调错门户"是浏览器里最难定位的一类错误。
+- **前端也要"能解析"**：契约测试全是静态字符串检查，不会解析源码，因此一个括号
+  写错、整个视图加载失败的语法错误能让全部测试保持绿色。`test_frontend_syntax.py`
+  改用 V8 自己的解析器（`vm.SourceTextModule`）逐文件解析，并真正 import 每个视图
+  以验证具名导出一致 —— 与浏览器同一套语义。**注意 `node --check` 补不上这个缺口**：
+  对含 ESM 语法的 `.js` 文件它会假通过。
 - **不触网**：采集管道用 `httpx.MockTransport` 注入与 Open-Meteo 同构的响应，
   端到端验证取数 → 落湖 → 派生 → 运行记录，并覆盖限流重试、契约破坏、单城市失败隔离。
 - **完全隔离**：每个测试用独立 `tmp_path` 作为数据湖与目录库，通过环境变量注入并清空全部 `lru_cache`。
@@ -509,6 +515,8 @@ pytest tests/test_insights.py -k episodes
 | 11 | **AQI 口径用错标准**：用欧洲 AQI ≤ 40 判"优良天"，同一批数据只有 9% 优良率，国标口径下是 64% | 实现 GB 3095-2012 国标 AQI（PM 走 24 小时滑动平均、O₃ 走 8 小时滑动平均），考核一律用国标，EAQI 仅作国际对比 |
 | 12 | **融合宽表九成气象列为空**：天气只覆盖 9 天、空气质量覆盖 99 天，外连接后大部分行没有风速与降水，归因分析样本被压缩到十分之一 | 把 ERA5 归档作为历史气象来源补进融合宽表（预报优先、归档兜底），并把这条上游正式写入血缘 |
 | 13 | **CSV 导出把中文报表名放进 HTTP 头**：HTTP 头只能是 latin-1，Starlette 抛 `UnicodeEncodeError` 变成 500 | 报表名按 RFC 3986 百分号编码，并加测试断言所有响应头都能 latin-1 编码 |
+| 14 | **一个括号写错、整个视图打不开**：数组字面量用 `)` 收尾，浏览器报 `Unexpected token ')'`。而 `node --check` 对它**假通过**（同一个坏文件存成 `.mjs` 退出码 1、存成 `.js` 退出码 0），静态契约测试也不解析源码，于是 272 项测试全绿 | 修正括号；新增 `test_frontend_syntax.py` 用 V8 解析器逐文件校验（已用"故意改回错误"验证过它确实会红） |
+| 15 | **"修好了但页面还报旧错"**：静态资源不发 `Cache-Control`，浏览器按 RFC 9111 启发式规则复用旧模块，而动态 `import()` 不吃强制刷新 | 给 `/shared`、`/static` 与 `index.html` 统一加 `no-cache`（仍缓存，但每次先带 ETag 校验），并加断言 |
 
 ---
 

@@ -105,6 +105,20 @@ def test_portal_config_declares_browser_reachable_urls(portals) -> None:
         assert "://" in url
 
 
+def test_frontend_assets_must_be_revalidated(portals) -> None:
+    """前端模块必须带 ``Cache-Control: no-cache``。
+
+    前端文件名没有内容哈希，缺了这条头浏览器就会按启发式规则复用旧模块，
+    出现"代码已修好、页面仍报旧错"的假象；动态 ``import()`` 又不吃强制刷新，
+    用户很难自行摆脱。
+    """
+    analysis, _ = portals
+    for path in ("/", "/index.html", "/shared/portal.js", "/static/views/relationship.js"):
+        response = analysis.get(path)
+        assert response.status_code == 200, path
+        assert "no-cache" in response.headers.get("cache-control", ""), path
+
+
 def test_unified_frontend_does_not_loosen_the_server_side_boundary(portals) -> None:
     """统一前端能同时看到两个平台，但**服务端**边界不能因此放宽。"""
     analysis, _ = portals
