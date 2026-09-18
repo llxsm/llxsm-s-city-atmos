@@ -24,11 +24,11 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
-import subprocess
 from pathlib import Path
 
 import pytest
+
+from conftest import run_node
 
 WEB = Path(__file__).resolve().parent.parent / "web"
 APP = WEB / "app"
@@ -39,49 +39,6 @@ MODULE_DECL = re.compile(r"""module\s*:\s*['"](/static/views/[A-Za-z0-9_\-/.]+\.
 # 文件数下限：防止收集逻辑坏掉后"零个文件、零个失败"地静默通过。
 MIN_JS_FILES = 20
 MIN_VIEWS = 16
-
-TIMEOUT_SECONDS = 120
-
-
-# ==================================================================
-# node 调用
-# ==================================================================
-def _node_prefix() -> list[str] | None:
-    """定位 node。Windows 上可能是 ``node.cmd`` 垫片，需经 cmd.exe 执行。"""
-    executable = shutil.which("node")
-    if not executable:
-        return None
-    if executable.lower().endswith((".cmd", ".bat")):
-        return [os.environ.get("COMSPEC") or "cmd.exe", "/c", executable]
-    return [executable]
-
-
-NODE = _node_prefix()
-
-pytestmark = pytest.mark.skipif(NODE is None, reason="未找到 node，跳过前端模块检查")
-
-
-def _run_node(script: Path, args: list[str], env_extra: dict[str, str] | None = None) -> dict:
-    """执行 node 脚本，取回它打印的 JSON 结果（最后一行有效输出）。"""
-    env = dict(os.environ)
-    env.update(env_extra or {})
-    completed = subprocess.run(
-        [*(NODE or []), "--no-warnings", "--experimental-vm-modules", str(script), *args],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        env=env,
-        timeout=TIMEOUT_SECONDS,
-        check=False,
-    )
-    lines = [line for line in completed.stdout.splitlines() if line.strip()]
-    if not lines:
-        pytest.fail(f"node 未输出结果（退出码 {completed.returncode}）：{completed.stderr.strip()[:800]}")
-    try:
-        return json.loads(lines[-1])
-    except json.JSONDecodeError:
-        pytest.fail(f"node 输出不是 JSON：{lines[-1][:400]}\nstderr: {completed.stderr.strip()[:400]}")
 
 
 def _walk_js() -> list[Path]:
@@ -126,12 +83,12 @@ def parse_script(tmp_path_factory: pytest.TempPathFactory) -> Path:
     return path
 
 
-def test_frontend_js_parses_as_esm(parse_script: Path) -> None:
+def test_frontend_js_parses_as_esm(parse_script: Path, node_cmd: list[str]) -> None:
     """每个前端 JS 都必须能被 V8 按 ES 模块解析。"""
     files = _walk_js()
     assert len(files) >= MIN_JS_FILES, f"只收集到 {len(files)} 个前端 JS，收集逻辑可能已失效"
 
-    result = _run_node(parse_script, [str(path) for path in files])
+    result = run_node(node_cmd, parse_script, [str(path) for path in files])
     failures = result["failures"]
     assert result["parsed"] == len(files)
     if failures:
@@ -194,7 +151,7 @@ def graph_scripts(tmp_path_factory: pytest.TempPathFactory) -> Path:
     return directory
 
 
-def test_view_modules_resolve_and_export_render(graph_scripts: Path) -> None:
+def test_view_modules_resolve_and_export_render(graph_scripts: Path, node_cmd: list[str]) -> None:
     """每个视图都要能被真正 import，并导出 render。
 
     这一步覆盖静态检查抓不到的两类问题：视图依赖的共享模块不存在，
@@ -202,9 +159,9 @@ def test_view_modules_resolve_and_export_render(graph_scripts: Path) -> None:
     """
     specifiers = _declared_views()
 
-    result = _run_node(
+    result = run_node(
+        node_cmd,
         graph_scripts / "runner.mjs",
-        [],
         env_extra={"ATMOS_WEB_ROOT": str(WEB), "ATMOS_VIEWS": ",".join(specifiers)},
     )
 

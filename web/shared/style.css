@@ -19,15 +19,32 @@
   --text-dim: #a9b5c9;
   --text-mute: #7b889e;
 
-  /* 主色与语义色 */
+  /* 主色与语义色
+     --accent* 这一组由 /shared/theme.js 在运行时按所选主题覆盖（见该文件 tokensFor）；
+     这里的取值等于**默认主题（科技蓝）**的推导结果，作用是脚本执行前首屏不闪色。
+     改这几个默认值时必须与 theme.js 的推导保持一致。 */
   --accent: #3b82f6;
-  --accent-hover: #2f6fdd;
+  --accent-hover: #3472d8;
   --accent-soft: rgba(59, 130, 246, 0.14);
+  --accent-faint: rgba(59, 130, 246, 0.06);
+  --accent-ink: #a7c7fb;
   --ok: #22c55e;
   --warn: #f59e0b;
   --danger: #ef4444;
   --info: #38bdf8;
   --purple: #a78bfa;
+
+  /* 图表分类色（ECharts 序列配色，由 theme.js 按主题覆盖；主色排第一） */
+  --series-1: #3b82f6;
+  --series-2: #22d3ee;
+  --series-3: #a78bfa;
+  --series-4: #22c55e;
+  --series-5: #f59e0b;
+  --series-6: #f472b6;
+  --series-7: #38bdf8;
+  --series-8: #fb923c;
+  --series-9: #4ade80;
+  --series-10: #e879f9;
 
   /* 等级色（与后端 A/B/C/D/E 语义一致） */
   --grade-a: #22c55e;
@@ -63,7 +80,7 @@ html, body {
 
 body {
   background:
-    radial-gradient(1200px 640px at 88% -10%, rgba(59, 130, 246, 0.12), transparent 60%),
+    radial-gradient(1200px 640px at 88% -10%, var(--accent-soft), transparent 60%),
     radial-gradient(900px 520px at -10% 0%, rgba(167, 139, 250, 0.08), transparent 55%),
     var(--bg);
   color: var(--text);
@@ -191,13 +208,31 @@ button, input, select, textarea { font: inherit; color: inherit; }
   white-space: nowrap;
   transition: background 0.15s ease, color 0.15s ease;
 }
-.seg-btn:hover { color: var(--text); background: rgba(59, 130, 246, 0.1); }
-.seg-btn:focus-visible { outline: 2px solid rgba(59, 130, 246, 0.6); outline-offset: 1px; }
+.seg-btn:hover { color: var(--text); background: var(--accent-faint); }
+.seg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .seg-btn.active {
-  background: linear-gradient(180deg, rgba(59, 130, 246, 0.9) 0%, rgba(37, 99, 235, 0.9) 100%);
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-hover) 100%);
   color: #f8fbff;
-  box-shadow: 0 1px 6px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 1px 6px var(--accent-soft);
 }
+
+/* 顶栏主题色取色器：只换"强调色"，等级/达标/告警等语义色不随主题变化 */
+.theme-picker {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 10px;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: rgba(21, 29, 46, 0.8);
+}
+.theme-dot {
+  appearance: none; cursor: pointer;
+  width: 15px; height: 15px; padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 50%;
+  /* 选中环用 currentColor：portal.js 会把 color 一并设成该主题主色 */
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.theme-dot:hover { transform: scale(1.18); }
+.theme-dot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.theme-dot.active { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px currentColor; }
 
 /* ---------------------------------------------------------------- 组件基元 */
 .card {
@@ -234,7 +269,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .kpi-value { font-size: 25px; font-weight: 650; letter-spacing: 0.3px; line-height: 1.15; }
 .kpi-value .unit { font-size: 13px; font-weight: 500; color: var(--text-dim); margin-left: 4px; }
 .kpi-foot { font-size: 11.5px; color: var(--text-mute); }
-.kpi-accent { box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.28); }
+.kpi-accent { box-shadow: inset 0 0 0 1px var(--accent-soft); }
 .value-ok { color: var(--ok); }
 .value-warn { color: var(--warn); }
 .value-bad { color: var(--danger); }
@@ -300,7 +335,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   white-space: nowrap;
 }
 .badge-mute { background: rgba(123, 136, 158, 0.14); color: var(--text-dim); border-color: rgba(123, 136, 158, 0.3); }
-.badge-accent { background: var(--accent-soft); color: #bcd4ff; border-color: rgba(59, 130, 246, 0.4); }
+.badge-accent { background: var(--accent-soft); color: var(--accent-ink); border-color: var(--accent); }
 .badge-ok { background: rgba(34, 197, 94, 0.14); color: #86efac; border-color: rgba(34, 197, 94, 0.35); }
 .badge-warn { background: rgba(245, 158, 11, 0.14); color: #fcd34d; border-color: rgba(245, 158, 11, 0.35); }
 .badge-bad { background: rgba(239, 68, 68, 0.14); color: #fca5a5; border-color: rgba(239, 68, 68, 0.35); }
@@ -336,7 +371,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 .chip:hover { background: #26334d; color: var(--text); }
-.chip.active { background: var(--accent-soft); border-color: rgba(59, 130, 246, 0.55); color: #cfe0ff; }
+.chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
 .chip .chip-count { color: var(--text-mute); font-variant-numeric: tabular-nums; }
 .chip.active .chip-count { color: #9ec1ff; }
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -356,9 +391,9 @@ table.table thead th {
 }
 table.table tbody tr { border-bottom: 1px solid rgba(38, 49, 72, 0.6); }
 table.table tbody tr:last-child { border-bottom: none; }
-table.table tbody tr:hover { background: rgba(59, 130, 246, 0.06); }
+table.table tbody tr:hover { background: var(--accent-faint); }
 table.table tbody tr.selectable { cursor: pointer; }
-table.table tbody tr.selected { background: rgba(59, 130, 246, 0.12); }
+table.table tbody tr.selected { background: var(--accent-soft); }
 table.table td.num, table.table th.num { text-align: right; font-variant-numeric: tabular-nums; }
 table.table td.wrap { white-space: normal; min-width: 220px; }
 table.table th.sortable { cursor: pointer; user-select: none; }
@@ -394,7 +429,7 @@ table.table th .sort-mark { color: var(--accent); margin-left: 4px; font-size: 1
 }
 .empty-title { font-size: 14px; color: var(--text); }
 .empty-hint { font-size: 12.5px; color: var(--text-mute); max-width: 620px; }
-.empty code, .chart-fallback code { font-family: var(--mono); background: rgba(59, 130, 246, 0.12); padding: 1px 6px; border-radius: 4px; color: #bcd4ff; }
+.empty code, .chart-fallback code { font-family: var(--mono); background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; color: var(--accent-ink); }
 .empty-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
 .chart-fallback { min-height: 160px; border-style: solid; border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.06); }
 /* 模块尚未安装时的内联提示（路由已就位、视图文件缺失） */
@@ -519,7 +554,7 @@ table.table th .sort-mark { color: var(--accent); margin-left: 4px; font-size: 1
 .node:hover { transform: translateY(-1px); border-color: var(--accent); }
 .node.selected { box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 1px var(--accent); border-color: var(--accent); }
 .node.muted { opacity: 0.32; }
-.node.highlight { box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.28); }
+.node.highlight { box-shadow: 0 0 0 2px var(--accent-soft); }
 .node-name { font-size: 12.8px; font-weight: 600; }
 .node-key { font-family: var(--mono); font-size: 10.5px; color: var(--text-mute); word-break: break-all; }
 .node-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 11px; color: var(--text-mute); }

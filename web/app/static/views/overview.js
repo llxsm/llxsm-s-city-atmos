@@ -15,6 +15,7 @@
 
 import { api } from '/shared/api.js';
 import { donutChart, radarChart, renderChart } from '/shared/charts.js';
+import { accent } from '/shared/theme.js';
 import {
   badge,
   button,
@@ -184,7 +185,7 @@ function renderChartsRow(overview) {
     const radar = renderChart(
       radarBody,
       radarChart(DIMENSION_KEYS.map((key) => DIMENSION_LABEL[key]), 100, [
-        { name: '维度均分', values, color: '#3b82f6' },
+        { name: '维度均分', values, color: accent() },
       ]),
       { emptyMessage: hasDimension ? '' : '尚无质量评分记录，雷达图暂不可用。' },
     );

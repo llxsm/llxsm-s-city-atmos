@@ -9,6 +9,10 @@
 
 from __future__ import annotations
 
+import json
+import os
+import shutil
+import subprocess
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -17,6 +21,69 @@ import pytest
 from atmos.settings import PROJECT_ROOT, reload_settings
 
 CONFIG_DIR = PROJECT_ROOT / "config"
+WEB_DIR = PROJECT_ROOT / "web"
+
+# 调用 node 的超时上限：前端检查都是本地小脚本，正常在秒级完成
+NODE_TIMEOUT_SECONDS = 120
+
+
+# ==================================================================
+# 前端检查辅助（需要 node，见 tests/test_frontend_syntax.py / test_frontend_theme.py）
+# ==================================================================
+def _node_prefix() -> list[str] | None:
+    """定位 node。Windows 上可能是 ``node.cmd`` 垫片，需经 cmd.exe 执行。"""
+    executable = shutil.which("node")
+    if not executable:
+        return None
+    if executable.lower().endswith((".cmd", ".bat")):
+        return [os.environ.get("COMSPEC") or "cmd.exe", "/c", executable]
+    return [executable]
+
+
+NODE = _node_prefix()
+
+
+@pytest.fixture(scope="session")
+def node_cmd() -> list[str]:
+    """node 命令前缀；未安装 node 时跳过依赖它的测试。
+
+    前端无构建步骤，node 不是本项目的运行依赖，因此这里只跳过而不失败。
+    """
+    if NODE is None:
+        pytest.skip("未找到 node，跳过前端检查")
+    return NODE
+
+
+def run_node(
+    node_cmd: list[str],
+    script: Path,
+    args: list[str] | None = None,
+    env_extra: dict[str, str] | None = None,
+) -> dict:
+    """执行 node 脚本，取回它打印的 JSON 结果（最后一行有效输出）。
+
+    约定：被测脚本把结论以 ``console.log(JSON.stringify(...))`` 输出到 stdout，
+    其余诊断信息走 stderr，不受 ``--no-warnings`` 之外的干扰。
+    """
+    env = dict(os.environ)
+    env.update(env_extra or {})
+    completed = subprocess.run(
+        [*node_cmd, "--no-warnings", "--experimental-vm-modules", str(script), *(args or [])],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        env=env,
+        timeout=NODE_TIMEOUT_SECONDS,
+        check=False,
+    )
+    lines = [line for line in completed.stdout.splitlines() if line.strip()]
+    if not lines:
+        pytest.fail(f"node 未输出结果（退出码 {completed.returncode}）：{completed.stderr.strip()[:800]}")
+    try:
+        return json.loads(lines[-1])
+    except json.JSONDecodeError:
+        pytest.fail(f"node 输出不是 JSON：{lines[-1][:400]}\nstderr: {completed.stderr.strip()[:400]}")
 
 
 @pytest.fixture()

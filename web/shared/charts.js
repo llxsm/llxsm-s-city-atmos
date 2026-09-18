@@ -6,28 +6,32 @@
  * 2. 深色主题与"无图表垃圾"的默认样式（去动画、细网格、顶部图例、十字准星提示）；
  * 3. ECharts 缺失或容器尺寸为 0 时的降级：在容器内给出内联提示，绝不抛错。
  *
- * 注意：ECharts 通过 CDN 的 `<script>` 全局引入，本模块不做 import。
+ * 注意：ECharts 通过 CDN 的 `<script>` 全局引入，本模块不 import 图表库；
+ * 只从 theme.js 取配色。
  */
+
+import { accent, accentSoft, seriesPalette } from '/shared/theme.js';
 
 const CDN_HINT =
   '图表库 ECharts 未能加载（CDN：cdn.jsdelivr.net/npm/echarts@5.5.1）。' +
   '请检查网络或代理设置后刷新页面；本页其余数据仍可正常查看。';
 
-export const PALETTE = [
-  '#3b82f6',
-  '#22d3ee',
-  '#a78bfa',
-  '#22c55e',
-  '#f59e0b',
-  '#f472b6',
-  '#38bdf8',
-  '#fb923c',
-  '#4ade80',
-  '#e879f9',
-];
-
-/** 图表通用文字颜色。 */
+/**
+ * 图表通用文字与网格颜色。
+ *
+ * 这些是中性色，**不随主题变化**：主题色只负责"强调"，文字与网格在任何主题下
+ * 都应保持同样的可读性，所以它们仍是常量。
+ */
 export const INK = { text: '#e6ebf4', dim: '#a9b5c9', mute: '#7b889e', grid: '#263148' };
+
+/**
+ * 图表序列配色，取自当前主题（主题主色打头，其后为固定分类色）。
+ * 需要按下标轮换颜色时用它 —— 不再导出静态 ``PALETTE``，避免出现两套配色。
+ * 视图侧若也要取色，统一从 theme.js 取，不要在这里再开一个入口。
+ */
+function palette() {
+  return seriesPalette();
+}
 
 function lib() {
   const echarts = typeof window !== 'undefined' ? window.echarts : undefined;
@@ -164,7 +168,7 @@ export function hasChart(container) {
 /** 所有图表共享的深色主题。 */
 export function theme() {
   return {
-    color: PALETTE,
+    color: palette(),
     backgroundColor: 'transparent',
     animation: false,
     textStyle: { color: INK.dim, fontFamily: 'inherit', fontSize: 12 },
@@ -244,8 +248,8 @@ export function zoomStyle({ start = 0, end = 100 } = {}) {
       bottom: 4,
       borderColor: 'transparent',
       backgroundColor: 'rgba(21, 29, 46, 0.7)',
-      fillerColor: 'rgba(59, 130, 246, 0.18)',
-      handleStyle: { color: '#3b82f6' },
+      fillerColor: accentSoft(),
+      handleStyle: { color: accent() },
       textStyle: { color: INK.mute, fontSize: 10 },
     },
   ];
@@ -319,9 +323,7 @@ export function lineChart(config) {
       itemStyle: item.color ? { color: item.color } : undefined,
       areaStyle: item.area
         ? {
-            color: item.color
-              ? item.color
-              : '#3b82f6',
+            color: item.color ? item.color : accent(),
             opacity: 0.12,
           }
         : undefined,
@@ -393,6 +395,7 @@ export function donutChart(items, { centerLabel = '', centerValue = '', unit = '
  * @param {Array<{name:string, values:number[], color?:string, area?:boolean}>} series
  */
 export function radarChart(indicators, max, series) {
+  const colors = palette();
   return {
     ...theme(),
     tooltip: tooltipStyle('item'),
@@ -411,7 +414,7 @@ export function radarChart(indicators, max, series) {
         type: 'radar',
         symbolSize: 4,
         data: series.map((item, index) => {
-          const color = item.color || PALETTE[index % PALETTE.length];
+          const color = item.color || colors[index % colors.length];
           return {
             name: item.name,
             value: item.values,
@@ -431,6 +434,7 @@ export function radarChart(indicators, max, series) {
  */
 export function barChart(config) {
   const { categories = [], series = [], horizontal = false, max = null, valueLabel = true, legend = false } = config;
+  const colors = palette();
   const categoryAxis = {
     type: 'category',
     data: categories,
@@ -458,7 +462,7 @@ export function barChart(config) {
       data: item.data,
       barMaxWidth: 22,
       itemStyle: {
-        color: item.color || PALETTE[index % PALETTE.length],
+        color: item.color || colors[index % colors.length],
         borderRadius: horizontal ? [0, 3, 3, 0] : [3, 3, 0, 0],
       },
       label: valueLabel

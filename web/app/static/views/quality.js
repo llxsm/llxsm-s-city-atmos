@@ -11,6 +11,7 @@
 
 import { api } from '/shared/api.js';
 import { barChart, lineChart, radarChart, renderChart } from '/shared/charts.js';
+import { accent } from '/shared/theme.js';
 import { requestTaskRefresh, waitForTask, taskKindLabel } from '/shared/tasks.js';
 import {
   badge,
@@ -142,7 +143,7 @@ function renderBody(host, ctx, summary) {
     el('div.grid.grid-2', null, [
       card('五维质量均分', dimensionBox, {
         subtitle: '满分 100 分；缺失维度不参与加权，避免"少声明即低分"',
-        actions: [el('div.legend', null, DIMENSION_KEYS.map((key) => legendItem('#3b82f6', DIMENSION_LABEL[key])))],
+        actions: [el('div.legend', null, DIMENSION_KEYS.map((key) => legendItem(accent(), DIMENSION_LABEL[key])))],
       }),
       card('等级分布', gradeBox, {
         subtitle: 'Grading：A ≥ 90、B ≥ 80、C ≥ 70、D ≥ 60、E < 60',
@@ -166,7 +167,7 @@ function renderBody(host, ctx, summary) {
       max: 100,
       series: [{
         name: '维度均分',
-        color: '#3b82f6',
+        color: accent(),
         data: DIMENSION_KEYS.map((key) => (typeof dimension[key] === 'number' ? dimension[key] : 0)),
       }],
     }));
@@ -474,7 +475,7 @@ async function openAssetQuality(assetKey, ctx) {
           const hit = dimensions.find((item) => item.key === key);
           return hit && typeof hit.score === 'number' ? hit.score : 0;
         }),
-        color: '#3b82f6',
+        color: accent(),
       }],
     ));
     if (chart) relays.push(chart);

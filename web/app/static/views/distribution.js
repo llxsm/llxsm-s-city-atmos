@@ -18,6 +18,7 @@
 
 import { api } from '/shared/api.js';
 import { renderChart } from '/shared/charts.js';
+import { accent, tint, withAlpha } from '/shared/theme.js';
 import {
   badge,
   button,
@@ -510,8 +511,8 @@ function boxplotCard(item) {
             num(row.boxplot.whisker_high),
           ]),
           boxWidth: [10, 34],
-          itemStyle: { color: 'rgba(59, 130, 246, 0.22)', borderColor: '#3b82f6', borderWidth: 1.4 },
-          emphasis: { itemStyle: { borderColor: '#93c5fd', borderWidth: 2 } },
+          itemStyle: { color: withAlpha(accent(), 0.22), borderColor: accent(), borderWidth: 1.4 },
+          emphasis: { itemStyle: { borderColor: tint(accent(), 0.5), borderWidth: 2 } },
         },
       ],
     });

@@ -6,7 +6,8 @@
  */
 
 import { api } from '/shared/api.js';
-import { lineChart, PALETTE, renderChart } from '/shared/charts.js';
+import { lineChart, renderChart } from '/shared/charts.js';
+import { seriesPalette } from '/shared/theme.js';
 import {
   badge,
   button,
@@ -249,6 +250,7 @@ async function renderChartArea() {
   });
   const axis = [...axisSet].sort();
   const axisLabels = axis.map((time) => shortDataTime(time));
+  const colors = seriesPalette();
 
   window.requestAnimationFrame(() => {
     if (!chartBox.isConnected) return;
@@ -256,7 +258,7 @@ async function renderChartArea() {
       categories: axisLabels,
       series: series.map((item, index) => ({
         name: item.city_name || item.city_slug,
-        color: PALETTE[index % PALETTE.length],
+        color: colors[index % colors.length],
         data: axis.map((time) => {
           const value = valueIndex[index].get(time);
           return typeof value === 'number' ? value : null;

@@ -65,6 +65,7 @@
 
 import { api, onStatus, getStatus, clearLastError, setActivePortal, servedPortal } from '/shared/api.js';
 import { disposeCharts } from '/shared/charts.js';
+import { THEMES, activeTheme, applyTheme, initTheme } from '/shared/theme.js';
 import {
   configureTasks,
   onTasks,
@@ -189,6 +190,9 @@ function buildPortalModel(config) {
 // ==================================================================
 
 export function startPortal(config) {
+  // 主题是全局偏好，且要在任何图表渲染前落地，否则首屏会先用默认色再跳成所选主题
+  initTheme();
+
   const MODELS = buildPortalModel(config);
   const AVAILABLE = [...MODELS.keys()];
   const APP_NAME = config.appName || '城市环境数据平台';
@@ -331,6 +335,7 @@ export function startPortal(config) {
     }
 
     renderSwitcher();
+    renderThemePicker();
     document.title = model.documentTitle;
   }
 
@@ -349,6 +354,41 @@ export function startPortal(config) {
         onClick: () => switchPortal(id),
       });
     }));
+  }
+
+  /**
+   * 顶栏主题色取色器。
+   *
+   * 主题是全局偏好（不按门户区分），选项清单来自 /shared/theme.js，
+   * 选择结果由该模块记在 localStorage['atmos.theme']。
+   */
+  function renderThemePicker() {
+    const host = qs('#themePicker');
+    if (!host) return;
+    const current = activeTheme().id;
+    mount(host, ...THEMES.map((item) => el('button.theme-dot', {
+      type: 'button',
+      class: item.id === current ? 'active' : '',
+      title: `主题色：${item.label}`,
+      'aria-label': `主题色：${item.label}`,
+      'aria-pressed': item.id === current ? 'true' : 'false',
+      // color 与 background 同设为该主题主色：选中环用 currentColor 取色（见 style.css）
+      style: { background: item.accent, color: item.accent },
+      onClick: () => switchTheme(item.id),
+    })));
+  }
+
+  /**
+   * 切换主题色。
+   *
+   * 图表颜色是渲染时从主题读出来的（charts.js → theme.js），不会自己更新，
+   * 所以必须重画当前视图；旧实例由 destroyCurrent() 负责销毁。
+   */
+  function switchTheme(id) {
+    if (id === activeTheme().id) return;
+    applyTheme(id);
+    renderThemePicker();
+    void renderCurrent();
   }
 
   function markActiveNav(routeName) {

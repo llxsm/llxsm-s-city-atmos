@@ -16,6 +16,7 @@
 
 import { api } from '/shared/api.js';
 import { renderChart } from '/shared/charts.js';
+import { accent, seriesPalette } from '/shared/theme.js';
 import {
   badge,
   button,
@@ -753,7 +754,7 @@ function renderWeeklyContent(panel, payload, ctx) {
             type: 'bar',
             data: items.map((item) => num(item.weekday_mean)),
             barMaxWidth: 20,
-            itemStyle: { color: '#3b82f6', borderRadius: [3, 3, 0, 0] },
+            itemStyle: { color: accent(), borderRadius: [3, 3, 0, 0] },
           },
           {
             name: '周末均值',
@@ -768,6 +769,7 @@ function renderWeeklyContent(panel, payload, ctx) {
 
     const lineNode = document.getElementById(lineId);
     if (lineNode && lineNode.isConnected) {
+      const colors = seriesPalette();
       renderChart(lineNode, {
         backgroundColor: 'transparent',
         animation: false,
@@ -804,7 +806,7 @@ function renderWeeklyContent(panel, payload, ctx) {
           symbolSize: 5,
           data: (item.by_weekday || []).map(num),
           lineStyle: { width: 1.8 },
-          itemStyle: { color: ['#3b82f6', '#22d3ee', '#a78bfa', '#22c55e', '#f59e0b', '#f472b6'][index % 6] },
+          itemStyle: { color: colors[index % colors.length] },
         })),
       });
     }

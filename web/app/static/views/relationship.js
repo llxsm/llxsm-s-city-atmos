@@ -14,6 +14,7 @@
 
 import { api } from '/shared/api.js';
 import { renderChart, theme, tooltipStyle } from '/shared/charts.js';
+import { accent, seriesPalette, withAlpha } from '/shared/theme.js';
 import {
   badge,
   button,
@@ -191,9 +192,9 @@ function coefficientClass(value) {
 function callout({ title, text }) {
   return el('div', {
     style: {
-      borderLeft: '3px solid #3b82f6',
+      borderLeft: `3px solid ${accent()}`,
       padding: '10px 14px',
-      background: 'rgba(59, 130, 246, 0.07)',
+      background: withAlpha(accent(), 0.07),
       borderRadius: '6px',
       display: 'flex',
       flexDirection: 'column',
@@ -585,6 +586,7 @@ function drawBins(target, payload, bins) {
 
   const unit = payload.y_unit || '';
   const categories = bins.map((bin) => `${bin.center}`);
+  const colors = seriesPalette();
 
   renderChart(target, {
     ...theme(),
@@ -630,9 +632,9 @@ function drawBins(target, payload, bins) {
         symbol: 'circle',
         symbolSize: 6,
         data: bins.map((bin) => num(bin.mean)),
-        lineStyle: { width: 2, color: '#3b82f6' },
-        itemStyle: { color: '#3b82f6' },
-        areaStyle: { color: '#3b82f6', opacity: 0.1 },
+        lineStyle: { width: 2, color: colors[0] },
+        itemStyle: { color: colors[0] },
+        areaStyle: { color: colors[0], opacity: 0.1 },
       },
       {
         name: '箱内中位数',
@@ -640,8 +642,8 @@ function drawBins(target, payload, bins) {
         smooth: true,
         symbol: 'none',
         data: bins.map((bin) => num(bin.median)),
-        lineStyle: { width: 1.6, type: 'dashed', color: '#22d3ee' },
-        itemStyle: { color: '#22d3ee' },
+        lineStyle: { width: 1.6, type: 'dashed', color: colors[1] },
+        itemStyle: { color: colors[1] },
       },
     ],
   });

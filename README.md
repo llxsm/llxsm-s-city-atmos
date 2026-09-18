@@ -243,11 +243,37 @@ window.__ATMOS_PORTALS__ = {
 
 ```
 web/app/            index.html + static/portal.config.js + static/views/（16 个视图）
-web/shared/         api.js 按门户选后端地址；portal.js 负责切换与路由；charts/ui/tasks/style
+web/shared/         api.js 按门户选后端地址；portal.js 负责切换与路由；theme.js 主题与配色；charts/ui/tasks/style
 ```
 
 其中分析平台的 `refresh.js`（数据刷新）与治理平台的 `audit.js`（运行审计）
 原本都叫 `ops`，合并时必须区分文件与路由 —— 现在按用途命名，避免看起来像同一个页面。
+
+### 主题色
+
+顶栏带一组取色圆点，6 个预设：科技蓝（默认）、湖青、紫罗兰、翠绿、琥珀、玫红。
+选择存在 `localStorage['atmos.theme']`，**两个门户共用**（主题是全局偏好），切换后
+当前视图会重画以让图表跟着换色。
+
+实现上每个主题**只声明一个主色**，其余取值全部推导（`web/shared/theme.js`）：
+
+| 令牌 | 推导方式 | 用途 |
+| --- | --- | --- |
+| `--accent` | 主题主色 | 按钮、导航高亮、选中边框 |
+| `--accent-hover` | 主色暗 12% | 悬停态 |
+| `--accent-soft` | 主色 14% 透明 | 选中底纹、柔和高亮 |
+| `--accent-faint` | 主色 6% 透明 | 表格行悬停 |
+| `--accent-ink` | 主色向白混合 55% | 柔和底纹上的文字（保证对比度） |
+| `--series-1..10` | 主色打头 + 固定分类色 | 图表序列配色 |
+
+这样加一个主题只需要填一个色值，同主题内部的色调关系也不会走样。
+
+**哪些颜色不跟随主题**：评级 A–E、空气质量分级、达标/告警、血缘分层这些颜色承载
+含义，在任何主题下都必须稳定，因此仍然硬编码在各自的视图里；城市/聚类这类
+分类色也保持不变，以便同一城市在不同会话里颜色一致。这是有意为之，不是遗漏。
+
+`theme()` 每次渲染时取色，所以主题切换后必须重画视图 —— `portal.js` 的
+`switchTheme()` 负责这件事（旧 ECharts 实例由 `destroyCurrent()` 销毁）。
 
 ---
 
@@ -435,7 +461,7 @@ POST /api/ops/bootstrap  /api/ops/refresh
 ## 测试
 
 ```bash
-pytest                    # 全部 275 项测试
+pytest                    # 全部 281 项测试
 pytest -v
 pytest tests/test_insights.py -k episodes
 ```
@@ -454,6 +480,7 @@ pytest tests/test_insights.py -k episodes
 | `test_portals.py` | **两平台协作**：共享状态、停用城市跨平台同步、接口集合互不重叠、`/portal-config.js` 身份注入、前端资源的缓存策略 |
 | `test_frontend_contract.py` | 统一前端：**每个门户的视图只调用自己那台服务的接口**、门户映射从配置解析、加载顺序、后端不可用时的降级 |
 | `test_frontend_syntax.py` | 前端**语法与模块图**：每个 JS 按 ESM 解析、每个视图可真正 import 且导出 `render`（需 node，缺失则跳过） |
+| `test_frontend_theme.py` | **主题色**：预设唯一、CSS 令牌齐备、默认主题与 `:root` 不漂移、图表不再硬编码主色；并用 node 真跑 `theme.js` 验证令牌推导与非法输入回落 |
 
 **测试策略**
 
@@ -526,6 +553,8 @@ pytest tests/test_insights.py -k episodes
 
 - **无定时调度**：配置项已预留，但需要手动触发采集
 - **无鉴权**：没有用户体系，接口全开放；生产环境需加认证与资产级权限
+- **只有深色主题**：主题色可选，但没有亮色模式 —— 亮色需要重做整套背景/文字令牌，
+  不是换个主色就能达到的，因此这一版只做"强调色"
 - **预警只算不推**：阈值规则能正确触发，但没有 Webhook / 邮件推送
 - **不适合超大数据**：质量评测把整表读进 pandas 计算，适合中小规模；
   上量需改为 DuckDB 下推聚合 + 按城市分批 + 增量评测

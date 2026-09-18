@@ -7,6 +7,7 @@
 
 import { api } from '/shared/api.js';
 import { boundaryMarkLine, lineChart, renderChart } from '/shared/charts.js';
+import { accent, accentSoft } from '/shared/theme.js';
 import {
   ALERT_SEVERITY,
   badge,
@@ -235,7 +236,9 @@ function conditionCard(item, ctx) {
 
   const node = el('div.cond', {
     class: item.city_slug === state.selected ? 'selected' : '',
-    style: state.selected === item.city_slug ? { borderColor: '#3b82f6', boxShadow: '0 0 0 2px rgba(59,130,246,0.18)' } : null,
+    style: state.selected === item.city_slug
+      ? { borderColor: accent(), boxShadow: `0 0 0 2px ${accentSoft()}` }
+      : null,
     onClick: () => {
       state.selected = item.city_slug;
       if (state.onSelect) state.onSelect(item.city_slug);
