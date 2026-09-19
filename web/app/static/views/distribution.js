@@ -18,7 +18,7 @@
 
 import { api } from '/shared/api.js';
 import { renderChart } from '/shared/charts.js';
-import { accent, tint, withAlpha } from '/shared/theme.js';
+import { accent, ink, tint, withAlpha } from '/shared/theme.js';
 import {
   badge,
   button,
@@ -475,29 +475,29 @@ function boxplotCard(item) {
     renderChart(target, {
       backgroundColor: 'transparent',
       animation: false,
-      textStyle: { color: '#a9b5c9', fontFamily: 'inherit', fontSize: 12 },
+      textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
       grid: { left: 10, right: 18, top: 24, bottom: 8, containLabel: true },
       tooltip: {
         trigger: 'item',
-        backgroundColor: 'rgba(15, 22, 38, 0.96)',
-        borderColor: '#33415c',
+        backgroundColor: ink().tooltipBg,
+        borderColor: ink().border,
         borderWidth: 1,
-        textStyle: { color: '#e6ebf4', fontSize: 12 },
+        textStyle: { color: ink().text, fontSize: 12 },
         confine: true,
       },
       xAxis: {
         type: 'category',
         data: rows.map((row) => row.city_name || row.city_slug),
-        axisLabel: { color: '#7b889e', fontSize: 11, interval: 0, hideOverlap: true },
-        axisLine: { lineStyle: { color: '#263148' } },
+        axisLabel: { color: ink().mute, fontSize: 11, interval: 0, hideOverlap: true },
+        axisLine: { lineStyle: { color: ink().grid } },
         axisTick: { show: false },
       },
       yAxis: {
         type: 'value',
         name: item.unit || '',
-        nameTextStyle: { color: '#7b889e', fontSize: 11 },
-        axisLabel: { color: '#7b889e', fontSize: 11 },
-        splitLine: { lineStyle: { color: '#263148', type: 'dashed' } },
+        nameTextStyle: { color: ink().mute, fontSize: 11 },
+        axisLabel: { color: ink().mute, fontSize: 11 },
+        splitLine: { lineStyle: { color: ink().grid, type: 'dashed' } },
       },
       series: [
         {
@@ -547,15 +547,15 @@ function histogramCard(item) {
     renderChart(target, {
       backgroundColor: 'transparent',
       animation: false,
-      textStyle: { color: '#a9b5c9', fontFamily: 'inherit', fontSize: 12 },
+      textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
       grid: { left: 10, right: 18, top: 26, bottom: 8, containLabel: true },
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
-        backgroundColor: 'rgba(15, 22, 38, 0.96)',
-        borderColor: '#33415c',
+        backgroundColor: ink().tooltipBg,
+        borderColor: ink().border,
         borderWidth: 1,
-        textStyle: { color: '#e6ebf4', fontSize: 12 },
+        textStyle: { color: ink().text, fontSize: 12 },
         confine: true,
         formatter: (params) => {
           const bin = bins[params?.[0]?.dataIndex ?? 0];
@@ -571,17 +571,17 @@ function histogramCard(item) {
         type: 'category',
         data: bins.map((bin) => String(bin.lower)),
         name: unit || '',
-        nameTextStyle: { color: '#7b889e', fontSize: 11 },
-        axisLabel: { color: '#7b889e', fontSize: 10, hideOverlap: true },
-        axisLine: { lineStyle: { color: '#263148' } },
+        nameTextStyle: { color: ink().mute, fontSize: 11 },
+        axisLabel: { color: ink().mute, fontSize: 10, hideOverlap: true },
+        axisLine: { lineStyle: { color: ink().grid } },
         axisTick: { show: false },
       },
       yAxis: {
         type: 'value',
         name: '记录数',
-        nameTextStyle: { color: '#7b889e', fontSize: 11 },
-        axisLabel: { color: '#7b889e', fontSize: 11 },
-        splitLine: { lineStyle: { color: '#263148', type: 'dashed' } },
+        nameTextStyle: { color: ink().mute, fontSize: 11 },
+        axisLabel: { color: ink().mute, fontSize: 11 },
+        splitLine: { lineStyle: { color: ink().grid, type: 'dashed' } },
       },
       series: [
         {
@@ -749,14 +749,14 @@ async function loadCorrelation(panel, metrics, ctx) {
     renderChart(target, {
       backgroundColor: 'transparent',
       animation: false,
-      textStyle: { color: '#a9b5c9', fontFamily: 'inherit', fontSize: 12 },
+      textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
       grid: { left: 12, right: 18, top: 20, bottom: 86, containLabel: true },
       tooltip: {
         trigger: 'item',
-        backgroundColor: 'rgba(15, 22, 38, 0.96)',
-        borderColor: '#33415c',
+        backgroundColor: ink().tooltipBg,
+        borderColor: ink().border,
         borderWidth: 1,
-        textStyle: { color: '#e6ebf4', fontSize: 12 },
+        textStyle: { color: ink().text, fontSize: 12 },
         confine: true,
         formatter: (params) => {
           const col = labelsZh[params.value[0]] || labels[params.value[0]];
@@ -767,17 +767,17 @@ async function loadCorrelation(panel, metrics, ctx) {
       xAxis: {
         type: 'category',
         data: labelsZh,
-        splitArea: { show: true, areaStyle: { color: ['rgba(21, 29, 46, 0.35)', 'rgba(11, 17, 32, 0.35)'] } },
-        axisLabel: { color: '#7b889e', fontSize: 10.5, interval: 0, rotate: 45 },
-        axisLine: { lineStyle: { color: '#263148' } },
+        splitArea: { show: true, areaStyle: { color: [ink().radarA, ink().radarB] } },
+        axisLabel: { color: ink().mute, fontSize: 10.5, interval: 0, rotate: 45 },
+        axisLine: { lineStyle: { color: ink().grid } },
         axisTick: { show: false },
       },
       yAxis: {
         type: 'category',
         data: labelsZh,
-        splitArea: { show: true, areaStyle: { color: ['rgba(21, 29, 46, 0.35)', 'rgba(11, 17, 32, 0.35)'] } },
-        axisLabel: { color: '#7b889e', fontSize: 10.5, interval: 0 },
-        axisLine: { lineStyle: { color: '#263148' } },
+        splitArea: { show: true, areaStyle: { color: [ink().radarA, ink().radarB] } },
+        axisLabel: { color: ink().mute, fontSize: 10.5, interval: 0 },
+        axisLine: { lineStyle: { color: ink().grid } },
         axisTick: { show: false },
       },
       visualMap: {
@@ -787,7 +787,7 @@ async function loadCorrelation(panel, metrics, ctx) {
         orient: 'horizontal',
         left: 'center',
         bottom: 6,
-        textStyle: { color: '#7b889e', fontSize: 11 },
+        textStyle: { color: ink().mute, fontSize: 11 },
         inRange: { color: ['#b91c1c', '#e2e8f0', '#1d4ed8'] },
       },
       series: [
@@ -797,11 +797,11 @@ async function loadCorrelation(panel, metrics, ctx) {
           data: cells,
           label: {
             show: labels.length <= 10,
-            color: '#e6ebf4',
+            color: ink().text,
             fontSize: 10,
             formatter: (params) => params.value[2],
           },
-          itemStyle: { borderColor: 'rgba(11, 17, 32, 0.6)', borderWidth: 0.5 },
+          itemStyle: { borderColor: ink().cellBorder, borderWidth: 0.5 },
           emphasis: { itemStyle: { borderColor: '#93c5fd', borderWidth: 1.5 } },
         },
       ],

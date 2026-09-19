@@ -10,22 +10,14 @@
  * 只从 theme.js 取配色。
  */
 
-import { accent, accentSoft, seriesPalette } from '/shared/theme.js';
+import { accent, accentSoft, ink, seriesPalette } from '/shared/theme.js';
 
 const CDN_HINT =
   '图表库 ECharts 未能加载（CDN：cdn.jsdelivr.net/npm/echarts@5.5.1）。' +
   '请检查网络或代理设置后刷新页面；本页其余数据仍可正常查看。';
 
 /**
- * 图表通用文字与网格颜色。
- *
- * 这些是中性色，**不随主题变化**：主题色只负责"强调"，文字与网格在任何主题下
- * 都应保持同样的可读性，所以它们仍是常量。
- */
-export const INK = { text: '#e6ebf4', dim: '#a9b5c9', mute: '#7b889e', grid: '#263148' };
-
-/**
- * 图表序列配色，取自当前主题（主题主色打头，其后为固定分类色）。
+ * 图表序列配色，取自当前主题（强调色打头，其后为固定分类色）。
  * 需要按下标轮换颜色时用它 —— 不再导出静态 ``PALETTE``，避免出现两套配色。
  * 视图侧若也要取色，统一从 theme.js 取，不要在这里再开一个入口。
  */
@@ -171,29 +163,29 @@ export function theme() {
     color: palette(),
     backgroundColor: 'transparent',
     animation: false,
-    textStyle: { color: INK.dim, fontFamily: 'inherit', fontSize: 12 },
-    title: { textStyle: { color: INK.text, fontSize: 13, fontWeight: 500 } },
+    textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
+    title: { textStyle: { color: ink().text, fontSize: 13, fontWeight: 500 } },
     grid: { left: 12, right: 18, top: 34, bottom: 8, containLabel: true },
     tooltip: tooltipStyle('axis'),
     legend: legendStyle(),
     categoryAxis: {
-      axisLine: { lineStyle: { color: INK.grid } },
+      axisLine: { lineStyle: { color: ink().grid } },
       axisTick: { show: false },
-      axisLabel: { color: INK.mute, fontSize: 11 },
+      axisLabel: { color: ink().mute, fontSize: 11 },
       splitLine: { show: false },
     },
     valueAxis: {
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: INK.mute, fontSize: 11 },
-      splitLine: { lineStyle: { color: INK.grid, type: 'dashed' } },
-      nameTextStyle: { color: INK.mute, fontSize: 11 },
+      axisLabel: { color: ink().mute, fontSize: 11 },
+      splitLine: { lineStyle: { color: ink().grid, type: 'dashed' } },
+      nameTextStyle: { color: ink().mute, fontSize: 11 },
     },
     radar: {
-      axisName: { color: INK.dim, fontSize: 11 },
-      splitLine: { lineStyle: { color: 'rgba(38, 49, 72, 0.9)' } },
-      splitArea: { areaStyle: { color: ['rgba(21, 29, 46, 0.35)', 'rgba(11, 17, 32, 0.35)'] } },
-      axisLine: { lineStyle: { color: INK.grid } },
+      axisName: { color: ink().dim, fontSize: 11 },
+      splitLine: { lineStyle: { color: ink().splitLine } },
+      splitArea: { areaStyle: { color: [ink().radarA, ink().radarB] } },
+      axisLine: { lineStyle: { color: ink().grid } },
     },
     line: { symbol: 'none', smooth: true, lineStyle: { width: 2 } },
     bar: { itemStyle: { borderRadius: [3, 3, 0, 0] } },
@@ -203,12 +195,12 @@ export function theme() {
 export function tooltipStyle(trigger = 'axis') {
   return {
     trigger,
-    axisPointer: { type: trigger === 'axis' ? 'cross' : 'shadow', label: { backgroundColor: '#1a2337' } },
-    backgroundColor: 'rgba(15, 22, 38, 0.96)',
-    borderColor: '#33415c',
+    axisPointer: { type: trigger === 'axis' ? 'cross' : 'shadow', label: { backgroundColor: ink().axisPointer } },
+    backgroundColor: ink().tooltipBg,
+    borderColor: ink().border,
     borderWidth: 1,
     padding: [8, 11],
-    textStyle: { color: INK.text, fontSize: 12 },
+    textStyle: { color: ink().text, fontSize: 12 },
     confine: true,
   };
 }
@@ -221,13 +213,13 @@ export function legendStyle(extra = {}) {
     itemWidth: 10,
     itemHeight: 10,
     itemGap: 14,
-    textStyle: { color: INK.dim, fontSize: 11.5 },
+    textStyle: { color: ink().dim, fontSize: 11.5 },
     ...extra,
   };
 }
 
 export function labelStyle(extra = {}) {
-  return { color: INK.dim, fontSize: 11.5, ...extra };
+  return { color: ink().dim, fontSize: 11.5, ...extra };
 }
 
 /** 需要缩放/平移的横轴（长周期趋势）时使用的 dataZoom 配置。 */
@@ -247,10 +239,10 @@ export function zoomStyle({ start = 0, end = 100 } = {}) {
       height: 16,
       bottom: 4,
       borderColor: 'transparent',
-      backgroundColor: 'rgba(21, 29, 46, 0.7)',
+      backgroundColor: ink().zoomBg,
       fillerColor: accentSoft(),
       handleStyle: { color: accent() },
-      textStyle: { color: INK.mute, fontSize: 10 },
+      textStyle: { color: ink().mute, fontSize: 10 },
     },
   ];
 }
@@ -264,7 +256,7 @@ export function boundaryMarkLine(time, label = '预报起点') {
     lineStyle: { color: '#f59e0b', type: 'dashed', width: 1.4 },
     label: {
       formatter: label,
-      color: '#fcd34d',
+      color: ink().warnInk,
       fontSize: 11,
       position: 'insideEndTop',
     },
@@ -291,8 +283,8 @@ export function lineChart(config) {
       type: 'category',
       boundaryGap: false,
       data: categories,
-      axisLabel: { color: INK.mute, fontSize: 11, hideOverlap: true },
-      axisLine: { lineStyle: { color: INK.grid } },
+      axisLabel: { color: ink().mute, fontSize: 11, hideOverlap: true },
+      axisLine: { lineStyle: { color: ink().grid } },
       axisTick: { show: false },
     },
     yAxis: yAxis
@@ -302,8 +294,8 @@ export function lineChart(config) {
       : [
           {
             type: 'value',
-            axisLabel: { color: INK.mute, fontSize: 11 },
-            splitLine: { lineStyle: { color: INK.grid, type: 'dashed' } },
+            axisLabel: { color: ink().mute, fontSize: 11 },
+            splitLine: { lineStyle: { color: ink().grid, type: 'dashed' } },
           },
         ],
     dataZoom: zoom ? zoomStyle() : undefined,
@@ -348,14 +340,14 @@ export function donutChart(items, { centerLabel = '', centerValue = '', unit = '
         center: ['50%', '52%'],
         avoidLabelOverlap: true,
         padAngle: 1.2,
-        itemStyle: { borderColor: '#101828', borderWidth: 1.5 },
+        itemStyle: { borderColor: ink().donutBorder, borderWidth: 1.5 },
         label: {
           show: true,
-          color: INK.dim,
+          color: ink().dim,
           fontSize: 11.5,
           formatter: '{b} {c}',
         },
-        labelLine: { length: 8, length2: 8, lineStyle: { color: INK.grid } },
+        labelLine: { length: 8, length2: 8, lineStyle: { color: ink().grid } },
         data: data.map((item) => ({
           name: item.name,
           value: item.value,
@@ -371,7 +363,7 @@ export function donutChart(items, { centerLabel = '', centerValue = '', unit = '
             top: '42%',
             style: {
               text: String(centerValue || total),
-              fill: INK.text,
+              fill: ink().text,
               fontSize: 22,
               fontWeight: 600,
               textAlign: 'center',
@@ -381,7 +373,7 @@ export function donutChart(items, { centerLabel = '', centerValue = '', unit = '
             type: 'text',
             left: 'center',
             top: '58%',
-            style: { text: centerLabel || unit || '合计', fill: INK.mute, fontSize: 11.5, textAlign: 'center' },
+            style: { text: centerLabel || unit || '合计', fill: ink().mute, fontSize: 11.5, textAlign: 'center' },
           },
         ]
       : [],
@@ -404,10 +396,10 @@ export function radarChart(indicators, max, series) {
       indicator: indicators.map((name) => ({ name, max })),
       radius: '64%',
       center: ['50%', '54%'],
-      axisName: { color: INK.dim, fontSize: 11.5 },
-      splitLine: { lineStyle: { color: 'rgba(38, 49, 72, 0.95)' } },
-      splitArea: { areaStyle: { color: ['rgba(21, 29, 46, 0.4)', 'rgba(11, 17, 32, 0.4)'] } },
-      axisLine: { lineStyle: { color: INK.grid } },
+      axisName: { color: ink().dim, fontSize: 11.5 },
+      splitLine: { lineStyle: { color: ink().splitLine } },
+      splitArea: { areaStyle: { color: [ink().radarA, ink().radarB] } },
+      axisLine: { lineStyle: { color: ink().grid } },
     },
     series: [
       {
@@ -438,15 +430,15 @@ export function barChart(config) {
   const categoryAxis = {
     type: 'category',
     data: categories,
-    axisLabel: { color: INK.mute, fontSize: 11, interval: 0, hideOverlap: true },
-    axisLine: { lineStyle: { color: INK.grid } },
+    axisLabel: { color: ink().mute, fontSize: 11, interval: 0, hideOverlap: true },
+    axisLine: { lineStyle: { color: ink().grid } },
     axisTick: { show: false },
   };
   const valueAxis = {
     type: 'value',
     max: max || undefined,
-    axisLabel: { color: INK.mute, fontSize: 11 },
-    splitLine: { lineStyle: { color: INK.grid, type: 'dashed' } },
+    axisLabel: { color: ink().mute, fontSize: 11 },
+    splitLine: { lineStyle: { color: ink().grid, type: 'dashed' } },
   };
 
   return {
@@ -469,7 +461,7 @@ export function barChart(config) {
         ? {
             show: true,
             position: horizontal ? 'right' : 'top',
-            color: INK.dim,
+            color: ink().dim,
             fontSize: 11,
           }
         : { show: false },

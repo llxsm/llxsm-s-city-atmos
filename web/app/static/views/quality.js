@@ -11,7 +11,7 @@
 
 import { api } from '/shared/api.js';
 import { barChart, lineChart, radarChart, renderChart } from '/shared/charts.js';
-import { accent } from '/shared/theme.js';
+import { accent, ink } from '/shared/theme.js';
 import { requestTaskRefresh, waitForTask, taskKindLabel } from '/shared/tasks.js';
 import {
   badge,
@@ -427,7 +427,7 @@ async function openAssetQuality(assetKey, ctx) {
       const chart = renderChart(historyBox, lineChart({
         categories: items.map((item) => formatAuditTime(item.scored_at, false)),
         series: [{ name: '总分', data: items.map((item) => item.overall), color: '#22c55e', area: true }],
-        yAxis: [{ type: 'value', min: 0, max: 100, axisLabel: { color: '#7b889e', fontSize: 11 } }],
+        yAxis: [{ type: 'value', min: 0, max: 100, axisLabel: { color: ink().mute, fontSize: 11 } }],
       }));
       if (chart) relays.push(chart);
     });

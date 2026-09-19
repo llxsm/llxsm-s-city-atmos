@@ -65,7 +65,7 @@
 
 import { api, onStatus, getStatus, clearLastError, setActivePortal, servedPortal } from '/shared/api.js';
 import { disposeCharts } from '/shared/charts.js';
-import { THEMES, activeTheme, applyTheme, initTheme } from '/shared/theme.js';
+import { THEMES, activeModeId, activeTheme, applyMode, applyTheme, initTheme } from '/shared/theme.js';
 import {
   configureTasks,
   onTasks,
@@ -336,6 +336,7 @@ export function startPortal(config) {
 
     renderSwitcher();
     renderThemePicker();
+    renderModeToggle();
     document.title = model.documentTitle;
   }
 
@@ -379,11 +380,34 @@ export function startPortal(config) {
   }
 
   /**
-   * 切换主题色。
+   * 深浅状态切换按钮。
    *
-   * 图表颜色是渲染时从主题读出来的（charts.js → theme.js），不会自己更新，
-   * 所以必须重画当前视图；旧实例由 destroyCurrent() 负责销毁。
+   * 按钮上显示**当前状态**（深色 / 浅色），`title` 说明点击后会切到哪个状态 ——
+   * 只显示"目标"会让用户分不清当前到底是不是浅色。
    */
+  function renderModeToggle() {
+    const button = qs('#modeToggle');
+    if (!button) return;
+    const mode = activeModeId();
+    const light = mode === 'light';
+    button.textContent = light ? '☀ 浅色' : '☾ 深色';
+    button.title = light ? '切换到深色状态' : '切换到浅色状态';
+    button.setAttribute('aria-pressed', light ? 'true' : 'false');
+  }
+
+  /**
+   * 切换深浅状态。
+   *
+   * 与强调色同理：图表颜色是渲染时按状态取出来的，必须重画当前视图，
+   * 否则会出现"面板变白了、图表还是深色轴"的错配。
+   */
+  function toggleMode() {
+    applyMode(activeModeId() === 'light' ? 'dark' : 'light');
+    renderModeToggle();
+    void renderCurrent();
+  }
+
+  /** 切换强调色。 */
   function switchTheme(id) {
     if (id === activeTheme().id) return;
     applyTheme(id);
@@ -854,6 +878,9 @@ export function startPortal(config) {
   // ==================================================================
 
   function bindShellEvents() {
+    const modeButton = qs('#modeToggle');
+    if (modeButton) modeButton.addEventListener('click', toggleMode);
+
     const refreshBtn = qs('#refreshBtn');
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => {

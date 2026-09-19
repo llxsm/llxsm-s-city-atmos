@@ -16,7 +16,7 @@
 
 import { api } from '/shared/api.js';
 import { renderChart } from '/shared/charts.js';
-import { accent, seriesPalette } from '/shared/theme.js';
+import { accent, ink, seriesPalette } from '/shared/theme.js';
 import {
   badge,
   button,
@@ -540,14 +540,14 @@ function renderHourlyContent(panel, payload) {
     renderChart(target, {
       backgroundColor: 'transparent',
       animation: false,
-      textStyle: { color: '#a9b5c9', fontFamily: 'inherit', fontSize: 12 },
+      textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
       grid: { left: 12, right: 18, top: 18, bottom: 64, containLabel: true },
       tooltip: {
         trigger: 'item',
-        backgroundColor: 'rgba(15, 22, 38, 0.96)',
-        borderColor: '#33415c',
+        backgroundColor: ink().tooltipBg,
+        borderColor: ink().border,
         borderWidth: 1,
-        textStyle: { color: '#e6ebf4', fontSize: 12 },
+        textStyle: { color: ink().text, fontSize: 12 },
         confine: true,
         formatter: (params) => {
           const row = rows[params.value[1]];
@@ -561,17 +561,17 @@ function renderHourlyContent(panel, payload) {
       xAxis: {
         type: 'category',
         data: hours.map((hour) => hourLabel(hour)),
-        splitArea: { show: true, areaStyle: { color: ['rgba(21, 29, 46, 0.35)', 'rgba(11, 17, 32, 0.35)'] } },
-        axisLabel: { color: '#7b889e', fontSize: 10.5, interval: 0 },
-        axisLine: { lineStyle: { color: '#263148' } },
+        splitArea: { show: true, areaStyle: { color: [ink().radarA, ink().radarB] } },
+        axisLabel: { color: ink().mute, fontSize: 10.5, interval: 0 },
+        axisLine: { lineStyle: { color: ink().grid } },
         axisTick: { show: false },
       },
       yAxis: {
         type: 'category',
         data: rows.map((row) => row.city_name || row.city_slug),
-        splitArea: { show: true, areaStyle: { color: ['rgba(21, 29, 46, 0.35)', 'rgba(11, 17, 32, 0.35)'] } },
-        axisLabel: { color: '#7b889e', fontSize: 11, interval: 0 },
-        axisLine: { lineStyle: { color: '#263148' } },
+        splitArea: { show: true, areaStyle: { color: [ink().radarA, ink().radarB] } },
+        axisLabel: { color: ink().mute, fontSize: 11, interval: 0 },
+        axisLine: { lineStyle: { color: ink().grid } },
         axisTick: { show: false },
       },
       visualMap: {
@@ -581,7 +581,7 @@ function renderHourlyContent(panel, payload) {
         orient: 'horizontal',
         left: 'center',
         bottom: 6,
-        textStyle: { color: '#7b889e', fontSize: 11 },
+        textStyle: { color: ink().mute, fontSize: 11 },
         inRange: { color: ['#0b1b33', '#1d4ed8', '#22d3ee', '#f59e0b', '#ef4444'] },
       },
       series: [
@@ -589,7 +589,7 @@ function renderHourlyContent(panel, payload) {
           name: metricLabel(payload.metric),
           type: 'heatmap',
           data: cells,
-          itemStyle: { borderColor: 'rgba(11, 17, 32, 0.6)', borderWidth: 0.5 },
+          itemStyle: { borderColor: ink().cellBorder, borderWidth: 0.5 },
           emphasis: { itemStyle: { borderColor: '#93c5fd', borderWidth: 1.5 } },
         },
       ],
@@ -713,16 +713,16 @@ function renderWeeklyContent(panel, payload, ctx) {
       renderChart(barNode, {
         backgroundColor: 'transparent',
         animation: false,
-        textStyle: { color: '#a9b5c9', fontFamily: 'inherit', fontSize: 12 },
-        legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: '#a9b5c9', fontSize: 11.5 } },
+        textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
+        legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: ink().dim, fontSize: 11.5 } },
         grid: { left: 10, right: 20, top: 36, bottom: 6, containLabel: true },
         tooltip: {
           trigger: 'axis',
           axisPointer: { type: 'shadow' },
-          backgroundColor: 'rgba(15, 22, 38, 0.96)',
-          borderColor: '#33415c',
+          backgroundColor: ink().tooltipBg,
+          borderColor: ink().border,
           borderWidth: 1,
-          textStyle: { color: '#e6ebf4', fontSize: 12 },
+          textStyle: { color: ink().text, fontSize: 12 },
           confine: true,
           formatter: (params) => {
             const item = items[params?.[0]?.dataIndex ?? 0];
@@ -739,14 +739,14 @@ function renderWeeklyContent(panel, payload, ctx) {
         xAxis: {
           type: 'category',
           data: categories,
-          axisLabel: { color: '#7b889e', fontSize: 11, interval: 0, hideOverlap: true },
-          axisLine: { lineStyle: { color: '#263148' } },
+          axisLabel: { color: ink().mute, fontSize: 11, interval: 0, hideOverlap: true },
+          axisLine: { lineStyle: { color: ink().grid } },
           axisTick: { show: false },
         },
         yAxis: {
           type: 'value',
-          axisLabel: { color: '#7b889e', fontSize: 11 },
-          splitLine: { lineStyle: { color: '#263148', type: 'dashed' } },
+          axisLabel: { color: ink().mute, fontSize: 11 },
+          splitLine: { lineStyle: { color: ink().grid, type: 'dashed' } },
         },
         series: [
           {
@@ -773,30 +773,30 @@ function renderWeeklyContent(panel, payload, ctx) {
       renderChart(lineNode, {
         backgroundColor: 'transparent',
         animation: false,
-        textStyle: { color: '#a9b5c9', fontFamily: 'inherit', fontSize: 12 },
-        legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: '#a9b5c9', fontSize: 11.5 } },
+        textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
+        legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: ink().dim, fontSize: 11.5 } },
         grid: { left: 10, right: 20, top: 36, bottom: 6, containLabel: true },
         tooltip: {
           trigger: 'axis',
           axisPointer: { type: 'cross' },
-          backgroundColor: 'rgba(15, 22, 38, 0.96)',
-          borderColor: '#33415c',
+          backgroundColor: ink().tooltipBg,
+          borderColor: ink().border,
           borderWidth: 1,
-          textStyle: { color: '#e6ebf4', fontSize: 12 },
+          textStyle: { color: ink().text, fontSize: 12 },
           confine: true,
         },
         xAxis: {
           type: 'category',
           boundaryGap: false,
           data: labels,
-          axisLabel: { color: '#7b889e', fontSize: 11 },
-          axisLine: { lineStyle: { color: '#263148' } },
+          axisLabel: { color: ink().mute, fontSize: 11 },
+          axisLine: { lineStyle: { color: ink().grid } },
           axisTick: { show: false },
         },
         yAxis: {
           type: 'value',
-          axisLabel: { color: '#7b889e', fontSize: 11 },
-          splitLine: { lineStyle: { color: '#263148', type: 'dashed' } },
+          axisLabel: { color: ink().mute, fontSize: 11 },
+          splitLine: { lineStyle: { color: ink().grid, type: 'dashed' } },
         },
         series: items.map((item, index) => ({
           name: item.label || metricLabel(item.metric),
@@ -938,16 +938,16 @@ function renderMonthlyContent(panel, payload, ctx) {
     renderChart(target, {
       backgroundColor: 'transparent',
       animation: false,
-      textStyle: { color: '#a9b5c9', fontFamily: 'inherit', fontSize: 12 },
-      legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: '#a9b5c9', fontSize: 11.5 } },
+      textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
+      legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: ink().dim, fontSize: 11.5 } },
       grid: { left: 10, right: 22, top: 36, bottom: 8, containLabel: true },
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'cross' },
-        backgroundColor: 'rgba(15, 22, 38, 0.96)',
-        borderColor: '#33415c',
+        backgroundColor: ink().tooltipBg,
+        borderColor: ink().border,
         borderWidth: 1,
-        textStyle: { color: '#e6ebf4', fontSize: 12 },
+        textStyle: { color: ink().text, fontSize: 12 },
         confine: true,
         formatter: (params) => {
           const item = months[params?.[0]?.dataIndex ?? 0];
@@ -966,16 +966,16 @@ function renderMonthlyContent(panel, payload, ctx) {
         type: 'category',
         boundaryGap: false,
         data: categories,
-        axisLabel: { color: '#7b889e', fontSize: 11, hideOverlap: true },
-        axisLine: { lineStyle: { color: '#263148' } },
+        axisLabel: { color: ink().mute, fontSize: 11, hideOverlap: true },
+        axisLine: { lineStyle: { color: ink().grid } },
         axisTick: { show: false },
       },
       yAxis: {
         type: 'value',
         name: unit || '',
-        nameTextStyle: { color: '#7b889e', fontSize: 11 },
-        axisLabel: { color: '#7b889e', fontSize: 11 },
-        splitLine: { lineStyle: { color: '#263148', type: 'dashed' } },
+        nameTextStyle: { color: ink().mute, fontSize: 11 },
+        axisLabel: { color: ink().mute, fontSize: 11 },
+        splitLine: { lineStyle: { color: ink().grid, type: 'dashed' } },
       },
       series: [
         {

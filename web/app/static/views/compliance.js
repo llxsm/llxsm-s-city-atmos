@@ -15,6 +15,7 @@
 
 import { api } from '/shared/api.js';
 import { renderChart } from '/shared/charts.js';
+import { ink } from '/shared/theme.js';
 import {
   badge,
   button,
@@ -480,7 +481,7 @@ function renderCompliance(panel, payload, ctx) {
   const sortKey = keys.has(state.sort.key) ? state.sort.key : null;
 
   const levelLegend = LEVEL_ORDER.map((level) =>
-    el('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#a9b5c9' } }, [
+    el('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: ink().dim } }, [
       el('span', { style: { width: '10px', height: '10px', borderRadius: '3px', background: levelColor(level) } }),
       el('span', { text: level }),
     ]),
@@ -552,16 +553,16 @@ function renderCompliance(panel, payload, ctx) {
     renderChart(target, {
       backgroundColor: 'transparent',
       animation: false,
-      textStyle: { color: '#a9b5c9', fontFamily: 'inherit', fontSize: 12 },
-      legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, itemGap: 12, textStyle: { color: '#a9b5c9', fontSize: 11.5 } },
+      textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
+      legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, itemGap: 12, textStyle: { color: ink().dim, fontSize: 11.5 } },
       grid: { left: 10, right: 24, top: 36, bottom: 8, containLabel: true },
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
-        backgroundColor: 'rgba(15, 22, 38, 0.96)',
-        borderColor: '#33415c',
+        backgroundColor: ink().tooltipBg,
+        borderColor: ink().border,
         borderWidth: 1,
-        textStyle: { color: '#e6ebf4', fontSize: 12 },
+        textStyle: { color: ink().text, fontSize: 12 },
         confine: true,
         formatter: (params) => {
           const row = cities[params?.[0]?.dataIndex];
@@ -578,16 +579,16 @@ function renderCompliance(panel, payload, ctx) {
       xAxis: {
         type: 'category',
         data: cities.map((row) => row.city_name),
-        axisLabel: { color: '#7b889e', fontSize: 11, interval: 0, rotate: 30, hideOverlap: false },
-        axisLine: { lineStyle: { color: '#263148' } },
+        axisLabel: { color: ink().mute, fontSize: 11, interval: 0, rotate: 30, hideOverlap: false },
+        axisLine: { lineStyle: { color: ink().grid } },
         axisTick: { show: false },
       },
       yAxis: {
         type: 'value',
         name: '天数',
-        nameTextStyle: { color: '#7b889e', fontSize: 11 },
-        axisLabel: { color: '#7b889e', fontSize: 11 },
-        splitLine: { lineStyle: { color: '#263148', type: 'dashed' } },
+        nameTextStyle: { color: ink().mute, fontSize: 11 },
+        axisLabel: { color: ink().mute, fontSize: 11 },
+        splitLine: { lineStyle: { color: ink().grid, type: 'dashed' } },
       },
       series: LEVEL_ORDER.map((level) => ({
         name: level,
@@ -724,15 +725,15 @@ function renderComparison(panel, payload) {
     renderChart(target, {
       backgroundColor: 'transparent',
       animation: false,
-      textStyle: { color: '#a9b5c9', fontFamily: 'inherit', fontSize: 12 },
+      textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
       grid: { left: 10, right: 26, top: 24, bottom: 8, containLabel: true },
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
-        backgroundColor: 'rgba(15, 22, 38, 0.96)',
-        borderColor: '#33415c',
+        backgroundColor: ink().tooltipBg,
+        borderColor: ink().border,
         borderWidth: 1,
-        textStyle: { color: '#e6ebf4', fontSize: 12 },
+        textStyle: { color: ink().text, fontSize: 12 },
         confine: true,
         formatter: (params) => {
           const row = rows[params?.[0]?.dataIndex];
@@ -748,16 +749,16 @@ function renderComparison(panel, payload) {
       xAxis: {
         type: 'category',
         data: rows.map((row) => row.city_name),
-        axisLabel: { color: '#7b889e', fontSize: 11, interval: 0, rotate: 30, hideOverlap: false },
-        axisLine: { lineStyle: { color: '#263148' } },
+        axisLabel: { color: ink().mute, fontSize: 11, interval: 0, rotate: 30, hideOverlap: false },
+        axisLine: { lineStyle: { color: ink().grid } },
         axisTick: { show: false },
       },
       yAxis: {
         type: 'value',
         name: '环比变化 %',
-        nameTextStyle: { color: '#7b889e', fontSize: 11 },
-        axisLabel: { color: '#7b889e', fontSize: 11 },
-        splitLine: { lineStyle: { color: '#263148', type: 'dashed' } },
+        nameTextStyle: { color: ink().mute, fontSize: 11 },
+        axisLabel: { color: ink().mute, fontSize: 11 },
+        splitLine: { lineStyle: { color: ink().grid, type: 'dashed' } },
       },
       series: [
         {

@@ -7,7 +7,7 @@
 
 import { api } from '/shared/api.js';
 import { boundaryMarkLine, lineChart, renderChart } from '/shared/charts.js';
-import { accent, accentSoft } from '/shared/theme.js';
+import { accent, accentSoft, ink } from '/shared/theme.js';
 import {
   ALERT_SEVERITY,
   badge,
@@ -207,7 +207,7 @@ function conditionCard(item, ctx) {
   const tempBlock = el('div', null, [
     el('div.cond-temp', null, [
       formatFixed(item.temperature_2m, 1),
-      el('span', { text: ' °C', style: { fontSize: '14px', fontWeight: '500', color: '#a9b5c9' } }),
+      el('span', { text: ' °C', style: { fontSize: '14px', fontWeight: '500', color: ink().dim } }),
     ]),
     el('div.cond-time', {
       text: `体感 ${formatFixed(item.apparent_temperature, 1)} °C · ${item.weather_label || '天气未知'}`,

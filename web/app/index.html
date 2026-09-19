@@ -49,6 +49,8 @@
         <div class="seg" id="portalSwitch" role="group" aria-label="平台切换"></div>
         <!-- 主题色取色器：选项由 /shared/theme.js 提供，选择结果记在 localStorage -->
         <div class="theme-picker" id="themePicker" role="group" aria-label="主题颜色"></div>
+        <!-- 深浅状态切换：文字与 aria-pressed 由 portal.js 按当前状态更新 -->
+        <button class="btn btn-ghost" id="modeToggle" type="button">深色</button>
         <div class="health" id="healthChip" title="接口连通状态">
           <span class="dot dot-idle" id="healthDot"></span>
           <span id="healthText">正在检测服务状态</span>

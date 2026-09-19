@@ -15,6 +15,7 @@
 
 import { api, analysisExportUrl } from '/shared/api.js';
 import { lineChart, renderChart } from '/shared/charts.js';
+import { ink } from '/shared/theme.js';
 import {
   badge,
   button,
@@ -331,7 +332,7 @@ function renderConditions(conditions, ctx) {
     ]),
     el('div.cond-temp', null, [
       formatFixed(item.temperature_2m, 1),
-      el('span', { text: ' °C', style: { fontSize: '14px', fontWeight: '500', color: '#a9b5c9' } }),
+      el('span', { text: ' °C', style: { fontSize: '14px', fontWeight: '500', color: ink().dim } }),
     ]),
     el('div.cond-metrics', null, [
       ['AQI', item.european_aqi === null || item.european_aqi === undefined ? '—' : formatFixed(item.european_aqi, 0)],

@@ -16,6 +16,7 @@
 
 import { api } from '/shared/api.js';
 import { renderChart, theme, tooltipStyle } from '/shared/charts.js';
+import { ink } from '/shared/theme.js';
 import {
   badge,
   button,
@@ -492,7 +493,7 @@ function renderEpisodes(ctx) {
   ];
 
   const levelChips = LEVEL_ORDER.filter((level) => levels[level]).map((level) =>
-    el('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#a9b5c9' } }, [
+    el('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: ink().dim } }, [
       el('span', { style: { width: '10px', height: '10px', borderRadius: '3px', background: levelColor(level) } }),
       el('span', { text: `${level} ${formatInt(levels[level])} 次` }),
     ]),
@@ -610,16 +611,16 @@ function renderEpisodes(ctx) {
       },
       xAxis: {
         type: 'time',
-        axisLabel: { color: '#7b889e', fontSize: 11, hideOverlap: true },
-        axisLine: { lineStyle: { color: '#263148' } },
+        axisLabel: { color: ink().mute, fontSize: 11, hideOverlap: true },
+        axisLine: { lineStyle: { color: ink().grid } },
         axisTick: { show: false },
         splitLine: { show: false },
       },
       yAxis: {
         type: 'category',
         data: timelineRows.map((row) => `#${row.rank} ${row.city_name}`),
-        axisLabel: { color: '#7b889e', fontSize: 11, interval: 0 },
-        axisLine: { lineStyle: { color: '#263148' } },
+        axisLabel: { color: ink().mute, fontSize: 11, interval: 0 },
+        axisLine: { lineStyle: { color: ink().grid } },
         axisTick: { show: false },
       },
       series: [
@@ -863,7 +864,7 @@ function renderOutliers(ctx) {
     renderChart(target, {
       ...theme(),
       grid: { left: 10, right: 22, top: 36, bottom: 8, containLabel: true },
-      legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: '#a9b5c9', fontSize: 11.5 } },
+      legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: ink().dim, fontSize: 11.5 } },
       tooltip: {
         ...tooltipStyle('item'),
         formatter: (params) => {
@@ -879,17 +880,17 @@ function renderOutliers(ctx) {
       },
       xAxis: {
         type: 'time',
-        axisLabel: { color: '#7b889e', fontSize: 11, hideOverlap: true },
-        axisLine: { lineStyle: { color: '#263148' } },
+        axisLabel: { color: ink().mute, fontSize: 11, hideOverlap: true },
+        axisLine: { lineStyle: { color: ink().grid } },
         axisTick: { show: false },
         splitLine: { show: false },
       },
       yAxis: {
         type: 'value',
         name: unit || '',
-        nameTextStyle: { color: '#7b889e', fontSize: 11 },
-        axisLabel: { color: '#7b889e', fontSize: 11 },
-        splitLine: { lineStyle: { color: '#263148', type: 'dashed' } },
+        nameTextStyle: { color: ink().mute, fontSize: 11 },
+        axisLabel: { color: ink().mute, fontSize: 11 },
+        splitLine: { lineStyle: { color: ink().grid, type: 'dashed' } },
       },
       series: [
         {

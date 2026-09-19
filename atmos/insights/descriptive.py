@@ -262,9 +262,12 @@ def weekly_profile(
         if working.empty:
             continue
 
-        weekday_mean = float(working.loc[~working["is_weekend"], "_v"].mean())
-        weekend_mean = float(working.loc[working["is_weekend"], "_v"].mean())
-        delta = weekend_mean - weekday_mean
+        # 三个值都按同一精度返回，且 delta 由**取整后**的两个均值相减得到：
+        # 若各自独立取整，页面上就会出现 "周末均值 − 工作日均值 ≠ delta" 的
+        # 0.001 级不一致，调用方按返回字段自行校验时会对不上。
+        weekday_mean = round(float(working.loc[~working["is_weekend"], "_v"].mean()), 3)
+        weekend_mean = round(float(working.loc[working["is_weekend"], "_v"].mean()), 3)
+        delta = round(weekend_mean - weekday_mean, 3)
         by_weekday = [
             round(float(working.loc[working["weekday"] == index, "_v"].mean()), 3)
             if (working["weekday"] == index).any()
@@ -279,9 +282,9 @@ def weekly_profile(
                 "base_metric": base,
                 "label": meta.get("label") or name,
                 "unit": meta.get("unit"),
-                "weekday_mean": round(weekday_mean, 3),
-                "weekend_mean": round(weekend_mean, 3),
-                "delta": round(delta, 3),
+                "weekday_mean": weekday_mean,
+                "weekend_mean": weekend_mean,
+                "delta": delta,
                 "delta_ratio": round(delta / weekday_mean * 100, 2) if weekday_mean else None,
                 "by_weekday": by_weekday,
                 "higher_on": "周末" if delta > 0 else "工作日",

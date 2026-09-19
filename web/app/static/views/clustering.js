@@ -13,6 +13,7 @@
 
 import { api } from '/shared/api.js';
 import { renderChart } from '/shared/charts.js';
+import { ink } from '/shared/theme.js';
 import {
   badge,
   button,
@@ -508,31 +509,31 @@ function drawHeatmap(target, similarity) {
   renderChart(target, {
     backgroundColor: 'transparent',
     animation: false,
-    textStyle: { color: '#a9b5c9', fontFamily: 'inherit', fontSize: 12 },
+    textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
     grid: { left: 12, right: 18, top: 20, bottom: 80, containLabel: true },
     tooltip: {
       trigger: 'item',
-      backgroundColor: 'rgba(15, 22, 38, 0.96)',
-      borderColor: '#33415c',
+      backgroundColor: ink().tooltipBg,
+      borderColor: ink().border,
       borderWidth: 1,
-      textStyle: { color: '#e6ebf4', fontSize: 12 },
+      textStyle: { color: ink().text, fontSize: 12 },
       confine: true,
       formatter: (params) => `${labels[params.value[1]]} × ${labels[params.value[0]]}<br />相似度 ${params.value[2]}`,
     },
     xAxis: {
       type: 'category',
       data: labels,
-      splitArea: { show: true, areaStyle: { color: ['rgba(21, 29, 46, 0.35)', 'rgba(11, 17, 32, 0.35)'] } },
-      axisLabel: { color: '#7b889e', fontSize: 10.5, interval: 0, rotate: 45 },
-      axisLine: { lineStyle: { color: '#263148' } },
+      splitArea: { show: true, areaStyle: { color: [ink().radarA, ink().radarB] } },
+      axisLabel: { color: ink().mute, fontSize: 10.5, interval: 0, rotate: 45 },
+      axisLine: { lineStyle: { color: ink().grid } },
       axisTick: { show: false },
     },
     yAxis: {
       type: 'category',
       data: labels,
-      splitArea: { show: true, areaStyle: { color: ['rgba(21, 29, 46, 0.35)', 'rgba(11, 17, 32, 0.35)'] } },
-      axisLabel: { color: '#7b889e', fontSize: 10.5, interval: 0 },
-      axisLine: { lineStyle: { color: '#263148' } },
+      splitArea: { show: true, areaStyle: { color: [ink().radarA, ink().radarB] } },
+      axisLabel: { color: ink().mute, fontSize: 10.5, interval: 0 },
+      axisLine: { lineStyle: { color: ink().grid } },
       axisTick: { show: false },
     },
     visualMap: {
@@ -542,7 +543,7 @@ function drawHeatmap(target, similarity) {
       orient: 'horizontal',
       left: 'center',
       bottom: 6,
-      textStyle: { color: '#7b889e', fontSize: 11 },
+      textStyle: { color: ink().mute, fontSize: 11 },
       inRange: { color: ['#0b1b33', '#1d4ed8', '#22d3ee', '#facc15'] },
     },
     series: [
@@ -552,11 +553,11 @@ function drawHeatmap(target, similarity) {
         data: cells,
         label: {
           show: labels.length <= 12,
-          color: '#e6ebf4',
+          color: ink().text,
           fontSize: 10,
           formatter: (params) => params.value[2],
         },
-        itemStyle: { borderColor: 'rgba(11, 17, 32, 0.6)', borderWidth: 0.5 },
+        itemStyle: { borderColor: ink().cellBorder, borderWidth: 0.5 },
         emphasis: { itemStyle: { borderColor: '#93c5fd', borderWidth: 1.5 } },
       },
     ],
@@ -577,16 +578,16 @@ function drawCandidateK(target, candidateK, chosenK) {
   renderChart(target, {
     backgroundColor: 'transparent',
     animation: false,
-    textStyle: { color: '#a9b5c9', fontFamily: 'inherit', fontSize: 12 },
-    legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: '#a9b5c9', fontSize: 11.5 } },
+    textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
+    legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: ink().dim, fontSize: 11.5 } },
     grid: { left: 10, right: 22, top: 36, bottom: 8, containLabel: true },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'cross' },
-      backgroundColor: 'rgba(15, 22, 38, 0.96)',
-      borderColor: '#33415c',
+      backgroundColor: ink().tooltipBg,
+      borderColor: ink().border,
       borderWidth: 1,
-      textStyle: { color: '#e6ebf4', fontSize: 12 },
+      textStyle: { color: ink().text, fontSize: 12 },
       confine: true,
       formatter: (params) => {
         const item = candidateK[params?.[0]?.dataIndex];
@@ -602,23 +603,23 @@ function drawCandidateK(target, candidateK, chosenK) {
     xAxis: {
       type: 'category',
       data: categories,
-      axisLabel: { color: '#7b889e', fontSize: 11, interval: 0 },
-      axisLine: { lineStyle: { color: '#263148' } },
+      axisLabel: { color: ink().mute, fontSize: 11, interval: 0 },
+      axisLine: { lineStyle: { color: ink().grid } },
       axisTick: { show: false },
     },
     yAxis: [
       {
         type: 'value',
         name: '轮廓系数',
-        nameTextStyle: { color: '#7b889e', fontSize: 11 },
-        axisLabel: { color: '#7b889e', fontSize: 11 },
-        splitLine: { lineStyle: { color: '#263148', type: 'dashed' } },
+        nameTextStyle: { color: ink().mute, fontSize: 11 },
+        axisLabel: { color: ink().mute, fontSize: 11 },
+        splitLine: { lineStyle: { color: ink().grid, type: 'dashed' } },
       },
       {
         type: 'value',
         name: 'inertia',
-        nameTextStyle: { color: '#7b889e', fontSize: 11 },
-        axisLabel: { color: '#7b889e', fontSize: 11 },
+        nameTextStyle: { color: ink().mute, fontSize: 11 },
+        axisLabel: { color: ink().mute, fontSize: 11 },
         splitLine: { show: false },
       },
     ],
@@ -657,7 +658,7 @@ function drawCandidateK(target, candidateK, chosenK) {
               silent: true,
               symbol: 'none',
               lineStyle: { color: '#f59e0b', type: 'dashed', width: 1.4 },
-              label: { formatter: `当前 K=${chosenK}`, color: '#fcd34d', fontSize: 11 },
+              label: { formatter: `当前 K=${chosenK}`, color: ink().warnInk, fontSize: 11 },
               data: [{ xAxis: candidateK.findIndex((item) => item.k === chosenK) }],
             }
           : undefined,
