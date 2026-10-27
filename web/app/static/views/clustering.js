@@ -12,8 +12,8 @@
  */
 
 import { api } from '/shared/api.js';
-import { renderChart } from '/shared/charts.js';
-import { ink } from '/shared/theme.js';
+import { legendStyle, renderChart } from '/shared/charts.js';
+import { accent, ink, withAlpha } from '/shared/theme.js';
 import {
   badge,
   button,
@@ -52,6 +52,9 @@ const DEFAULT_FEATURES = [
 
 const K_MAX = 8;
 
+// 聚类分类色**刻意固定**，不随强调色主题变化：它们的作用是区分"第几类"，
+// 一旦跟着主题走，同一份聚类结果在不同主题下看起来像换了一套分组。
+// 与评级 A–E、空气质量分级同理 —— 承载含义的颜色必须稳定。
 const CLUSTER_COLORS = ['#3b82f6', '#22d3ee', '#a78bfa', '#f59e0b', '#22c55e', '#f472b6', '#38bdf8', '#fb923c'];
 
 const state = {
@@ -544,7 +547,11 @@ function drawHeatmap(target, similarity) {
       left: 'center',
       bottom: 6,
       textStyle: { color: ink().mute, fontSize: 11 },
-      inRange: { color: ['#0b1b33', '#1d4ed8', '#22d3ee', '#facc15'] },
+      // 色阶从"基线"推到"强调色"，而不是写死一条深蓝→黄：
+      // 原先深色底的渐变搬到浅色模式后，低值格是深海军蓝、格内文字是深灰，
+      // 直接变成深底深字不可读。用网格线色作低端、强调色作高端，
+      // 两种状态下都保证"格子颜色越深 = 值越高"且文字始终可读。
+      inRange: { color: [ink().grid, withAlpha(accent(), 0.35), withAlpha(accent(), 0.7), accent()] },
     },
     series: [
       {
@@ -558,7 +565,7 @@ function drawHeatmap(target, similarity) {
           formatter: (params) => params.value[2],
         },
         itemStyle: { borderColor: ink().cellBorder, borderWidth: 0.5 },
-        emphasis: { itemStyle: { borderColor: '#93c5fd', borderWidth: 1.5 } },
+        emphasis: { itemStyle: { borderColor: withAlpha(accent(), 0.65), borderWidth: 1.5 } },
       },
     ],
   });
@@ -579,7 +586,7 @@ function drawCandidateK(target, candidateK, chosenK) {
     backgroundColor: 'transparent',
     animation: false,
     textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
-    legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: ink().dim, fontSize: 11.5 } },
+    legend: legendStyle(),
     grid: { left: 10, right: 22, top: 36, bottom: 8, containLabel: true },
     tooltip: {
       trigger: 'axis',
@@ -640,10 +647,13 @@ function drawCandidateK(target, candidateK, chosenK) {
         symbol: 'circle',
         symbolSize: 8,
         data: candidateK.map((item) => num(item.silhouette)),
-        lineStyle: { width: 2, color: '#22d3ee' },
-        itemStyle: { color: '#22d3ee' },
+        lineStyle: { width: 2, color: accent() },
+        itemStyle: { color: accent() },
         markPoint: {
           symbolSize: 46,
+          // 这枚"印章"的底色与文字色**刻意写死**：亮黄底 + 近黑字在深浅两种状态下
+          // 都有足够对比度，跟着主题走反而会出现深底深字。与评级 A–E 同理，
+          // 它承载"这是选中的 K"这层含义，不需要随主题变化。
           label: { color: '#0b1120', fontSize: 10, formatter: (params) => `K=${candidateK[params.dataIndex]?.k ?? ''}` },
           itemStyle: { color: '#facc15' },
           data: candidateK
@@ -657,7 +667,7 @@ function drawCandidateK(target, candidateK, chosenK) {
           ? {
               silent: true,
               symbol: 'none',
-              lineStyle: { color: '#f59e0b', type: 'dashed', width: 1.4 },
+              lineStyle: { color: ink().warnInk, type: 'dashed', width: 1.4 },
               label: { formatter: `当前 K=${chosenK}`, color: ink().warnInk, fontSize: 11 },
               data: [{ xAxis: candidateK.findIndex((item) => item.k === chosenK) }],
             }

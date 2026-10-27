@@ -14,7 +14,7 @@
  */
 
 import { api } from '/shared/api.js';
-import { renderChart } from '/shared/charts.js';
+import { legendStyle, renderChart } from '/shared/charts.js';
 import { ink } from '/shared/theme.js';
 import {
   badge,
@@ -554,7 +554,7 @@ function renderCompliance(panel, payload, ctx) {
       backgroundColor: 'transparent',
       animation: false,
       textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
-      legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, itemGap: 12, textStyle: { color: ink().dim, fontSize: 11.5 } },
+      legend: legendStyle({ itemGap: 12 }),
       grid: { left: 10, right: 24, top: 36, bottom: 8, containLabel: true },
       tooltip: {
         trigger: 'axis',

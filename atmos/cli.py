@@ -173,6 +173,44 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_prune(args: argparse.Namespace) -> int:
+    """清理过期运行记录与导出文件（默认干跑，不删除任何东西）。"""
+    from atmos.prune import prune
+
+    _ensure_catalog()
+    report = prune(
+        days=args.days,
+        export_days=args.export_days,
+        dry_run=not args.apply,
+        vacuum=args.vacuum,
+    )
+
+    if args.json:
+        _print(report.to_payload(), as_json=True)
+        return 0
+
+    mode = "干跑，不删除任何东西" if report.dry_run else "已执行删除"
+    print(f"\n===== 保留策略：{mode} =====")
+    print(f"元数据保留 {report.days} 天，导出文件保留 {report.export_days} 天")
+    print(f"早于 {report.cutoff:%Y-%m-%d %H:%M} UTC 的记录将被清理\n")
+    print(f"{'对象':<30}{'行数':>10}")
+    print("-" * 40)
+    for name, count in report.rows.items():
+        print(f"{name:<30}{count:>10,}")
+    print("-" * 40)
+    print(f"{'合计':<30}{report.total_rows:>10,}")
+    print(
+        f"\n导出文件：{report.export_files} 个 / {report.export_bytes / 1024 / 1024:.2f} MB"
+        f"（早于 {report.export_cutoff:%Y-%m-%d}）"
+    )
+    print("数据湖（parquet）不在清理范围内 —— 那是唯一删了要重新采集才能回来的东西。")
+    if report.dry_run:
+        print("\n这是干跑。确认无误后加 --apply 执行；要回收文件空间再加 --vacuum。")
+    elif report.vacuumed:
+        print("\n已执行 VACUUM 回收文件空间。")
+    return 0
+
+
 def cmd_assets(args: argparse.Namespace) -> int:
     """列出数据资产。"""
     from atmos.catalog.service import list_assets
@@ -509,6 +547,13 @@ def build_parser() -> argparse.ArgumentParser:
     quality.add_argument("--assets", default=None, help="逗号分隔的资产 key")
 
     subparsers.add_parser("status", help="打印平台状态概览")
+    prune_cmd = subparsers.add_parser("prune", help="清理过期运行记录与导出文件（默认干跑）")
+    prune_cmd.add_argument("--days", type=int, default=None, help="元数据保留天数，默认取 ATMOS_RETENTION_DAYS")
+    prune_cmd.add_argument(
+        "--export-days", type=int, default=None, help="导出文件保留天数，默认取 ATMOS_RETENTION_EXPORT_DAYS"
+    )
+    prune_cmd.add_argument("--apply", action="store_true", help="真正执行删除（不加则只报告）")
+    prune_cmd.add_argument("--vacuum", action="store_true", help="删除后执行 VACUUM 回收文件空间")
     assets = subparsers.add_parser("assets", help="列出数据资产")
     assets.add_argument("--domain", default=None)
     assets.add_argument("--layer", default=None)
@@ -554,6 +599,7 @@ COMMANDS = {
     "collect": cmd_collect,
     "quality": cmd_quality,
     "status": cmd_status,
+    "prune": cmd_prune,
     "assets": cmd_assets,
     "lineage": cmd_lineage,
     "cities": cmd_cities,

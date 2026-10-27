@@ -128,6 +128,39 @@ def test_chart_colors_come_from_the_theme() -> None:
         source = _strip_comments(path.read_text(encoding="utf-8"))
         assert re.search(r"\bPALETTE\b", source) is None, f"{path.name} 仍引用静态 PALETTE"
 
+
+def test_chart_toolbox_is_available_for_every_chart() -> None:
+    """每个图表都应能"保存为图片"，且图标颜色跟随主题。
+
+    工具箱挂在 ``theme()`` 上而不是逐个视图添加：视图侧漏一个，就会在某个页面上
+    出现"别的图能导出、这张不能"的不一致。
+    """
+    charts = _strip_comments(CHARTS.read_text(encoding="utf-8"))
+    assert "export function toolboxStyle" in charts, "charts.js 缺少 toolboxStyle"
+    assert "saveAsImage" in charts, "工具箱里应包含保存图片"
+    assert re.search(r"toolbox:\s*toolboxStyle\(\)", charts), "theme() 未挂载 toolbox"
+    assert "iconStyle: { borderColor: ink().mute }" in charts, "工具箱图标颜色应跟随主题"
+
+
+def test_view_legends_use_the_shared_style() -> None:
+    """图例外观必须来自 ``legendStyle()``，不能在各视图里复制一份。
+
+    复制出来的图例不会跟着共享样式变化（例如给工具箱腾位置时右移），
+    于是"同一个平台里图例位置不一样"——这类不一致最难被使用者描述、也最难排查。
+    """
+    for path in sorted((WEB / "app" / "static" / "views").glob("*.js")):
+        source = _strip_comments(path.read_text(encoding="utf-8"))
+        assert "legend: { top: 0, right: 8" not in source, (
+            f"{path.name} 复制了共享图例样式，应改用 legendStyle()"
+        )
+
+
+def test_clustering_heatmap_follows_the_theme() -> None:
+    """热力色阶不能写死深色背景色，否则浅色模式下会变成深底深字。"""
+    source = _strip_comments((WEB / "app" / "static" / "views" / "clustering.js").read_text(encoding="utf-8"))
+    assert "#0b1b33" not in source, "聚类热力图仍使用深海军蓝底色，浅色模式下不可读"
+    assert "inRange" in source and "accent()" in source, "热力色阶应从强调色推导"
+
     for path in sorted((WEB / "app" / "static" / "views").glob("*.js")):
         source = _strip_comments(path.read_text(encoding="utf-8"))
         assert re.search(r"\bPALETTE\b", source) is None, f"{path.name} 仍引用静态 PALETTE"

@@ -97,6 +97,14 @@ class Settings(BaseSettings):
     schedule_collect_cron: str = "15 * * * *"   # 每小时第 15 分：增量采集（跳过归档）
     schedule_quality_cron: str = "30 * * * *"   # 每小时第 30 分：五维质量评测
     schedule_archive_cron: str = "20 4 * * *"   # 每天 04:20：回补 ERA5 归档（上游约 5 天延迟）
+    schedule_prune_cron: str = "30 3 * * *"     # 每天 03:30：清理过期运行记录（不碰 parquet）
+
+    # ---------- 保留策略 ----------
+    # 只影响**元数据与导出文件**，数据湖（parquet）不在清理范围内：
+    # 那是唯一删了要重新采集才能回来的东西，而运行记录、质量明细只是观测历史。
+    # 默认 90 天足够回答"上个季度这条链路稳不稳"，又不至于让 SQLite 无限长大。
+    retention_days: int = 90
+    retention_export_days: int = 30
 
     # ---------- 校验 ----------
     @field_validator("log_level")

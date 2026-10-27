@@ -10,9 +10,9 @@
 ```
 web/
   shared/                 两个服务共享；服务端挂载在 /shared
-    style.css             深色主题、全部组件样式与顶栏分段切换器
+    style.css             两套深浅状态、全部组件样式与顶栏分段切换器
     api.js                REST 客户端：按门户解析基地址、TTL 缓存、统一错误面
-    charts.js             ECharts 生命周期、深色主题与图表构建器
+    charts.js             ECharts 生命周期、主题化配置与图表构建器
     ui.js                 DOM 构造器、格式化、通用组件、抽屉与提示
     tasks.js              后台任务轮询（数据源由外壳按门户注入）
     portal.js             统一外壳：命名空间路由 + 门户切换（startPortal）
@@ -46,6 +46,18 @@ web/
 * ECharts 随代码托管在 `static/vendor/echarts.min.js`，用 `<script>` 标签引入，
   `charts.js` 不 import 它，只在缺失时于图表位置给出内联提示。**不走 CDN**：
   `cdn.jsdelivr.net` 在国内网络下经常直接不可达，图表的失败方式是"静默变空白"。
+
+### 图表约定（新增图表时请照做）
+
+* **配色只从 `theme.js` 取**（`ink()` / `accent()` / `withAlpha()` / `seriesPalette()`）。
+  写死 `#hex` 的后果不是"丑"，而是换主题或切浅色后文字与底色撞在一起；
+  例外只有承载含义的语义色（评级 A–E、空气质量分级、聚类分类色），它们必须稳定；
+* **外观从共享函数取**：`tooltipStyle()` / `legendStyle()` / `labelStyle()` /
+  `zoomStyle()`。尤其不要再复制一份 `legend: { top: 0, right: 8, ... }` ——
+  共享图例已经右移到 `right: 34`，给右上角的图标让位；
+* **工具箱在 `theme()` 上**，每个图表自动获得"保存图片"。不要再逐个视图添加，
+  否则会出现"这张能导出、那张不能"；
+* 长序列（> 200 点）记得 `zoom: true`，走 `zoomStyle()` 的滚轮 + 滑块缩放。
 
 两个服务监听同样的路径，只是端口不同（分析 8000、治理 8001），
 共享模块与视图的绝对 URL 在两边解析结果一致 —— 这是"一份前端"的关键。

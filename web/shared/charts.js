@@ -168,6 +168,7 @@ export function theme() {
     grid: { left: 12, right: 18, top: 34, bottom: 8, containLabel: true },
     tooltip: tooltipStyle('axis'),
     legend: legendStyle(),
+    toolbox: toolboxStyle(),
     categoryAxis: {
       axisLine: { lineStyle: { color: ink().grid } },
       axisTick: { show: false },
@@ -202,19 +203,54 @@ export function tooltipStyle(trigger = 'axis') {
     padding: [8, 11],
     textStyle: { color: ink().text, fontSize: 12 },
     confine: true,
+    // 多序列时按数值降序：判断"谁最高/谁最好"不用在一堆行里逐个比对。
+    // 单序列不受影响，因此只在 axis 触发时设置。
+    ...(trigger === 'axis' ? { order: 'valueDesc' } : {}),
   };
 }
 
 export function legendStyle(extra = {}) {
   return {
     top: 0,
-    right: 8,
+    // 右侧留出 34px 给工具箱的"保存图片"图标，否则两者会叠在一起
+    right: 34,
     icon: 'roundRect',
     itemWidth: 10,
     itemHeight: 10,
     itemGap: 14,
     textStyle: { color: ink().dim, fontSize: 11.5 },
     ...extra,
+  };
+}
+
+/**
+ * 图表工具箱：只放一个"保存图片"。
+ *
+ * 加它是因为这个平台的主要产出是给人看的图表 —— 汇报、周报、跟同事对齐时，
+ * 截图往往比链接管用。只放一个图标是刻意的：工具箱一旦堆满
+ * （刷新、数据视图、缩放…），每个图右上角都会变成一排按钮，
+ * 而其余功能在页面里已经有了入口。
+ *
+ * ``excludeComponents: ['toolbox']`` 让导出的图里不出现这个图标本身。
+ */
+export function toolboxStyle() {
+  return {
+    show: true,
+    right: 8,
+    top: 2,
+    itemSize: 13,
+    itemGap: 8,
+    iconStyle: { borderColor: ink().mute },
+    emphasis: { iconStyle: { borderColor: ink().text } },
+    feature: {
+      saveAsImage: {
+        title: '保存图片',
+        name: 'atmos-chart',
+        pixelRatio: 2,
+        backgroundColor: ink().tooltipBg,
+        excludeComponents: ['toolbox'],
+      },
+    },
   };
 }
 
@@ -253,7 +289,7 @@ export function boundaryMarkLine(time, label = '预报起点') {
   return {
     silent: true,
     symbol: 'none',
-    lineStyle: { color: '#f59e0b', type: 'dashed', width: 1.4 },
+    lineStyle: { color: ink().warnInk, type: 'dashed', width: 1.4 },
     label: {
       formatter: label,
       color: ink().warnInk,

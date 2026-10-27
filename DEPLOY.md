@@ -41,23 +41,46 @@
 
 ## 1. 服务器基线
 
+**先过这一关：云控制台的安全组。** 阿里云/腾讯云/华为云在系统防火墙之外还有一层
+"安全组"（有的叫防火墙），**ufw 只管系统这一层**。只开 ufw 不开安全组，结果就是
+`ufw status` 显示 80 已放行、浏览器却一直转圈 —— 这是新手最常卡住的地方。
+去控制台的"安全组 / 防火墙"里放行入方向 **TCP 22 与 80**，来源填 `0.0.0.0/0`
+（学习阶段够用；以后可以收紧成你的固定 IP）。
+
+同样地，`systemctl status nginx`、`curl 127.0.0.1` 都正常但外网打不开时，
+先怀疑安全组，别怀疑 Nginx。
+
+**从 Windows 连上去**：Win10/11 自带 OpenSSH 客户端，不需要 PuTTY。打开
+Windows Terminal（或 PowerShell）：
+
+```powershell
+ssh root@你的服务器IP
+```
+
+首次会问 `Are you sure you want to continue connecting?`，输 `yes` 再输密码。
+密码输入时不显示字符，这是正常的，别以为键盘坏了。
+
 以 root 首次登录后执行：
 
 ```bash
 apt update && apt upgrade -y
 apt install -y git nginx apache2-utils ufw curl rsync sqlite3 tmux python3-venv python3-dev
 
-adduser atmos                 # 交互式设密码，其余项直接回车
+adduser atmos                 # 交互式设密码，其余项（Full Name 等）直接回车
 
 ufw allow OpenSSH             # ⚠️ 必须先放行 SSH
 ufw allow 80/tcp
 ufw enable
 ```
 
+> `adduser` 这一步别跳。跳过它之后所有涉及属主的地方都会失败，而且报错发生在
+> **下一步**（`chown: invalid user: 'atmos:atmos'`），很容易误判成命令写错。
+
 **验收**
 
 ```bash
 python3 --version       # 期望 3.11.x（Debian 12 自带，满足 requires-python >=3.11）
+id atmos                # 期望 uid=100?(atmos) gid=100?(atmos) —— 用户和同名组都在
 ufw status verbose      # 22 与 80 为 ALLOW，其余 deny
 ```
 
@@ -85,6 +108,12 @@ ssh -T git@github.com          # 验收：出现 successfully authenticated
 
 **验收**：`ls /opt/atmos` 能看到 `atmos/`、`web/`、`config/`、`pyproject.toml`。
 
+> **已经 clone 到别处了？**（比如以 root 身份 clone 到 `/root/xxx`）必须搬到 `/opt/atmos`：
+> `/root` 的权限是 `drwx------`，`atmos` 用户连目录都进不去，systemd 里
+> `User=atmos` + `WorkingDirectory=/opt/atmos` 会直接起不来。搬完还要**重建 venv**
+> —— `pip install -e .` 会把手写的绝对路径写进 `.venv` 的 shebang 和 editable 查找器，
+> 目录一挪就全部指向旧路径（详见第 3 节末尾）。
+
 ---
 
 ## 3. Python 环境
@@ -104,8 +133,15 @@ python3 -m venv .venv
 
 ```bash
 .venv/bin/python -c "import fastapi, duckdb, pyarrow, pandas; print('deps ok')"
+.venv/bin/python -c "import atmos; print(atmos.__file__)"   # 必须指向 /opt/atmos/atmos
 du -sh .venv      # 约 500MB 上下，正常
 ```
+
+> **venv 不能跟着目录一起搬。** `pip install -e .` 把绝对路径写进了两处：
+> `.venv/bin/*` 脚本第一行的 shebang，以及 site-packages 里 editable 安装的查找器。
+> 仓库目录一改名或一挪位置，`import atmos` 仍会去找旧路径，报
+> `ModuleNotFoundError` 或悄悄加载到另一份代码。遇到这种情况：删掉 `.venv` 重建，
+> 别去改那些文件。
 
 ---
 
@@ -155,6 +191,21 @@ ATMOS_AUTH_PASSWORD=一个足够长的密码
 - 两个 `PUBLIC_URL` 决定了前端往哪发请求，**末尾不要带斜杠**；
 - `ATMOS_CORS_ORIGINS` 保持留空。全站同源，留空即"不发 CORS 头"，正是需要的。
 
+> **不装 Nginx、改用 SSH 隧道 + 双端口访问时，上面最后一条要反过来。**
+> 那时页面在 `127.0.0.1:8000`、API 在 `127.0.0.1:8001`，**两个端口是两个源**，
+> 再加上 `ATMOS_ENV=prod` 时白名单为空等于不发 CORS 头，浏览器会把跨源请求全拦掉
+> —— 症状是"顶栏点「数据治理」切不过去，但页面本身能打开"。此时必须显式填写，
+> 两个源都要写（同一个配置项被两个服务共用）：
+>
+> ```ini
+> ATMOS_CORS_ORIGINS=http://127.0.0.1:8000,http://127.0.0.1:8001
+> ```
+>
+> 验收不用开浏览器：
+> `curl -s -o /dev/null -D - -H "Origin: http://127.0.0.1:8000" http://127.0.0.1:8001/api/health | grep -i access-control-allow-origin`
+> 应回显 `access-control-allow-origin: http://127.0.0.1:8000`。
+> 走 Nginx 路径分流后记得清空这一项。
+
 改完 `.env` 记得 `chmod 600`，密码就在里面。
 
 **验收**
@@ -183,6 +234,18 @@ cd /opt/atmos
 中途可以 `Ctrl+B` 再按 `D` 脱离，回来用 `tmux attach -t init`。
 
 如果只想先看效果不想等，加 `--skip-archive`（跳过归档，快很多，但趋势/同比类分析会缺数据）。
+
+> **tmux 里那个窗口正跑着前台进程时，敲什么都进不去 shell。** 你在里面输入命令，
+> 字符是交给 uvicorn 的 stdin 的，屏幕上只会看到 `^B^B` 这类回显（tmux 前缀被按下，
+> 但没有跟一个动作键）。三种出路：
+>
+> | 想干什么 | 操作 |
+> | --- | --- |
+> | 另开一个窗口执行命令 | `Ctrl+B` **松开**，再按 `c`；切回用 `Ctrl+B` 松开再按 `0`/`1` |
+> | 回本地开新连接 | VS Code 终端面板点 `+`，重新 `ssh root@IP` |
+> | 只脱离、不杀进程 | `Ctrl+B` **松开**，再按 `d`（回来 `tmux attach -t 会话名`） |
+>
+> 前缀键的关键是**松开再按下一个键**，连按两次 `Ctrl+B` 不产生任何效果。
 
 **验收**：最后会打印 7 个资产的质量评分表，等级多在 A/B。
 
@@ -322,11 +385,17 @@ su - atmos -c 'cd /opt/atmos && .venv/bin/python -m atmos schedule --list'
   collect 15 * * * *      2026-10-27 13:15  增量采集（跳过 ERA5 归档）
   quality 30 * * * *      2026-10-27 13:30  五维质量评测
   archive 20 4 * * *      2026-10-28 04:20  完整采集（含 ERA5 归档回补）
+  prune   30 3 * * *      2026-10-28 03:30  清理过期运行记录与导出文件（不含 parquet）
 ```
 
-三个作业的分工是刻意的：`collect` 每小时只拉天气与空气质量、**跳过归档**；
+四个作业的分工是刻意的：`collect` 每小时只拉天气与空气质量、**跳过归档**；
 ERA5 有约 5 天发布延迟，每小时重拉 15 城市 × 180 天窗口纯属浪费带宽和上游额度，
-交给每天凌晨的 `archive` 一次做完。要改时间就改 `.env` 里三条 cron，留空即停用。
+交给每天凌晨的 `archive` 一次做完。`prune` 只删元数据与导出文件，
+**永远不碰 Parquet**（那删了要重新采集才能回来）。要改时间就改 `.env` 里四条 cron，
+留空即停用。
+
+> 想先看 `prune` 会删多少，别等凌晨：`python -m atmos prune` 默认**干跑**，
+> 只报数不落刀；确认后加 `--apply`。详见 README 的「保留策略与清理」。
 
 交给 systemd 常驻：
 
@@ -447,6 +516,46 @@ sudo systemctl restart atmos-analysis atmos-governance atmos-scheduler
 ```
 
 `PUBLIC_URL` 改了要重启 Web（前端拿到的是注入值）；cron 或密码改了要连调度一起重启。
+
+**按改动范围决定动作**（比背命令有用）
+
+| 改了什么 | 服务器上要做 |
+| --- | --- |
+| `web/` 下任意文件（html/js/css） | `git pull` 即生效，**无需重启** |
+| `atmos/` 下 `.py` | `git pull` + 重启对应服务 |
+| `pyproject.toml` 的依赖 | `git pull` + `pip install -e .` + 重启 |
+| `config/*.yaml` | `git pull` + 重启（启动时投影进资产目录） |
+| `.env` | 不用 pull，直接重启 |
+
+第一行为什么不用重启：静态资源是 `StaticFiles` 挂载 + `FileResponse`，**每次请求都从磁盘读**，
+不是启动时读进内存；浏览器侧也有 `Cache-Control: no-cache`（带 ETag 校验），不会拿旧模块。
+Python 模块则只在启动时导入一次，不重启等于没改。
+
+> 改了前端却发现"像没生效"：先按 F12 看 Network 里那个文件是不是 200/304 且内容已是新的；
+> 仍然怀疑时 `sudo systemctl restart atmos-analysis` 一次，排除变量。
+
+**改前端请在你自己的电脑上改，不要 SSH 上去 `nano`**
+
+不是洁癖问题。服务器上直接改出来的文件是**未提交的工作区改动**，下一次 `git pull`
+会报 `Your local changes would be overwritten`，而你得在一个没有编辑器、没有图形界面、
+还跑着线上服务的地方解冲突。
+
+本地循环（改 → 看 → 提交 → 上线）：
+
+```bash
+# 1. 本地起服务看效果（无构建步骤，保存后刷新即可，不需要编译）
+python -m atmos serve --portal both --no-open
+
+# 2. 跑前端契约与语法测试（会检查 index.html 的资源引用、视图模块路径、JS 语法）
+python -m pytest tests/test_frontend_contract.py tests/test_frontend_syntax.py -q
+
+# 3. 提交推送
+git add -A && git commit -m "fix: ..." && git push
+
+# 4. 服务器拉取
+su - atmos && cd /opt/atmos && git pull && exit
+#    只有前端改动 → 到此生效，浏览器刷新即可
+```
 
 ---
 

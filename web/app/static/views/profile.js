@@ -15,7 +15,7 @@
  */
 
 import { api } from '/shared/api.js';
-import { renderChart } from '/shared/charts.js';
+import { legendStyle, renderChart } from '/shared/charts.js';
 import { accent, ink, seriesPalette } from '/shared/theme.js';
 import {
   badge,
@@ -714,7 +714,7 @@ function renderWeeklyContent(panel, payload, ctx) {
         backgroundColor: 'transparent',
         animation: false,
         textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
-        legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: ink().dim, fontSize: 11.5 } },
+        legend: legendStyle(),
         grid: { left: 10, right: 20, top: 36, bottom: 6, containLabel: true },
         tooltip: {
           trigger: 'axis',
@@ -774,7 +774,7 @@ function renderWeeklyContent(panel, payload, ctx) {
         backgroundColor: 'transparent',
         animation: false,
         textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
-        legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: ink().dim, fontSize: 11.5 } },
+        legend: legendStyle(),
         grid: { left: 10, right: 20, top: 36, bottom: 6, containLabel: true },
         tooltip: {
           trigger: 'axis',
@@ -939,7 +939,7 @@ function renderMonthlyContent(panel, payload, ctx) {
       backgroundColor: 'transparent',
       animation: false,
       textStyle: { color: ink().dim, fontFamily: 'inherit', fontSize: 12 },
-      legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: ink().dim, fontSize: 11.5 } },
+      legend: legendStyle(),
       grid: { left: 10, right: 22, top: 36, bottom: 8, containLabel: true },
       tooltip: {
         trigger: 'axis',

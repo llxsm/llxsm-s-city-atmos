@@ -13,7 +13,7 @@
  */
 
 import { api } from '/shared/api.js';
-import { renderChart, theme, tooltipStyle } from '/shared/charts.js';
+import { legendStyle, renderChart, theme, tooltipStyle } from '/shared/charts.js';
 import { accent, ink, seriesPalette, withAlpha } from '/shared/theme.js';
 import {
   badge,
@@ -540,7 +540,7 @@ function drawScatter(target, payload, scatter) {
   renderChart(target, {
     ...theme(),
     grid: { left: 12, right: 22, top: 38, bottom: 10, containLabel: true },
-    legend: { top: 0, right: 8, icon: 'circle', itemWidth: 9, itemHeight: 9, itemGap: 12, textStyle: { color: ink().dim, fontSize: 11.5 } },
+    legend: legendStyle({ icon: 'circle', itemWidth: 9, itemHeight: 9, itemGap: 12 }),
     tooltip: {
       ...tooltipStyle('item'),
       formatter: (params) => {
@@ -591,7 +591,7 @@ function drawBins(target, payload, bins) {
   renderChart(target, {
     ...theme(),
     grid: { left: 10, right: 22, top: 36, bottom: 8, containLabel: true },
-    legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: ink().dim, fontSize: 11.5 } },
+    legend: legendStyle(),
     tooltip: {
       ...tooltipStyle('axis'),
       formatter: (params) => {

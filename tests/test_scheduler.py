@@ -204,9 +204,9 @@ def test_describe_lists_next_run() -> None:
 # ==================================================================
 # 配置装配
 # ==================================================================
-def test_default_jobs_are_three(workspace, settings) -> None:
+def test_default_jobs_are_four(workspace, settings) -> None:
     names = [job.name for job in build_default_jobs(settings)]
-    assert names == ["collect", "quality", "archive"]
+    assert names == ["collect", "quality", "archive", "prune"]
 
 
 def test_empty_cron_disables_job(workspace, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -215,7 +215,7 @@ def test_empty_cron_disables_job(workspace, monkeypatch: pytest.MonkeyPatch) -> 
     from atmos.settings import reload_settings
 
     names = [job.name for job in build_default_jobs(reload_settings())]
-    assert names == ["collect", "archive"]
+    assert names == ["collect", "archive", "prune"]
 
 
 def test_invalid_cron_in_settings_fails_fast(workspace, monkeypatch: pytest.MonkeyPatch) -> None:

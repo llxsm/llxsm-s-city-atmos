@@ -308,6 +308,20 @@ def quality_handler() -> int:
     return 0
 
 
+def prune_handler() -> int:
+    """清理过期运行记录与导出文件（不碰 parquet）。"""
+    from atmos.prune import prune
+
+    report = prune(dry_run=False)
+    logger.info(
+        "保留策略执行：清理 %s 行元数据、%s 个导出文件（早于 %s）",
+        report.total_rows,
+        report.export_files,
+        report.cutoff.isoformat(),
+    )
+    return 0
+
+
 def build_default_jobs(settings) -> list[ScheduledJob]:  # type: ignore[no-untyped-def]
     """按配置装配默认作业。cron 为空的作业直接不登记（即停用）。"""
     from functools import partial
@@ -330,6 +344,12 @@ def build_default_jobs(settings) -> list[ScheduledJob]:  # type: ignore[no-untyp
             settings.schedule_archive_cron,
             partial(collect_handler, include_archive=True),
             "完整采集（含 ERA5 归档回补）",
+        ),
+        (
+            "prune",
+            settings.schedule_prune_cron,
+            prune_handler,
+            "清理过期运行记录与导出文件（不含 parquet）",
         ),
     ]
 

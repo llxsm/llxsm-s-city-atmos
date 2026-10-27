@@ -15,7 +15,7 @@
  */
 
 import { api } from '/shared/api.js';
-import { renderChart, theme, tooltipStyle } from '/shared/charts.js';
+import { legendStyle, renderChart, theme, tooltipStyle } from '/shared/charts.js';
 import { ink } from '/shared/theme.js';
 import {
   badge,
@@ -864,7 +864,7 @@ function renderOutliers(ctx) {
     renderChart(target, {
       ...theme(),
       grid: { left: 10, right: 22, top: 36, bottom: 8, containLabel: true },
-      legend: { top: 0, right: 8, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: ink().dim, fontSize: 11.5 } },
+      legend: legendStyle(),
       tooltip: {
         ...tooltipStyle('item'),
         formatter: (params) => {
