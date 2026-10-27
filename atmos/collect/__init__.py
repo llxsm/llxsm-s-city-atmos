@@ -13,6 +13,13 @@ from atmos.collect.jobs import (
     build_city_environment_hourly,
 )
 from atmos.collect.runner import SCOPE_STAGES, Collector, recent_runs, run_collection, run_summary
+from atmos.collect.scheduler import (
+    CronError,
+    CronExpression,
+    ScheduledJob,
+    Scheduler,
+    build_default_jobs,
+)
 
 __all__ = [
     "Collector",
@@ -20,6 +27,11 @@ __all__ = [
     "recent_runs",
     "run_summary",
     "SCOPE_STAGES",
+    "CronError",
+    "CronExpression",
+    "ScheduledJob",
+    "Scheduler",
+    "build_default_jobs",
     "JobContext",
     "JobOutcome",
     "CityOutcome",

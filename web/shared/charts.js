@@ -13,8 +13,8 @@
 import { accent, accentSoft, ink, seriesPalette } from '/shared/theme.js';
 
 const CDN_HINT =
-  '图表库 ECharts 未能加载（CDN：cdn.jsdelivr.net/npm/echarts@5.5.1）。' +
-  '请检查网络或代理设置后刷新页面；本页其余数据仍可正常查看。';
+  '图表库 ECharts 未能加载（应随页面从 /static/vendor/echarts.min.js 提供）。' +
+  '请刷新页面；若持续失败，说明静态资源未随代码部署。本页其余数据仍可正常查看。';
 
 /**
  * 图表序列配色，取自当前主题（强调色打头，其后为固定分类色）。

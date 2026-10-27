@@ -396,6 +396,58 @@ def cmd_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_schedule(args: argparse.Namespace) -> int:
+    """常驻调度：按 cron 跑采集与质量评测。
+
+    刻意做成**独立进程**而不是内嵌到 Web 服务里。两个门户都会启动 Web 服务，
+    内嵌定时器会让同一批数据被采集两遍；独立进程也让"谁在跑定时任务"只有一个
+    答案，并且 Web 重启不会打断正在进行的一次采集。
+    """
+    from atmos.collect.scheduler import CronError, Scheduler, build_default_jobs
+
+    settings = get_settings()
+    try:
+        jobs = build_default_jobs(settings)
+    except CronError as exc:
+        print(f"\n  cron 配置有误：{exc}")
+        print("  检查 .env 里的 ATMOS_SCHEDULE_*_CRON\n")
+        return 2
+
+    if not jobs:
+        print("\n  所有作业都已停用（cron 为空），没有可执行的任务\n")
+        return 0
+
+    scheduler = Scheduler(jobs)
+
+    if args.list:
+        rows = scheduler.describe()
+        print("\n  城市环境数据平台 · 调度作业清单\n")
+        print(f"  {'作业':<8}{'cron':<16}{'下次执行':<18}说明")
+        print("  " + "-" * 76)
+        for row in rows:
+            print(f"  {row['作业']:<8}{row['cron']:<16}{row['下次']:<18}{row['说明']}")
+        print()
+        return 0
+
+    _ensure_catalog(reload=True)
+
+    if args.once:
+        # 不等 cron，逐个作业各跑一次：验证配置、或手动补一次数据
+        for job in jobs:
+            print(f"\n  执行 {job.name}（{job.description}）…")
+            try:
+                code = job.handler()
+            except Exception as exc:  # 单个作业失败不掩盖其余作业的结果
+                print(f"  {job.name} 失败：{exc}")
+                return 1
+            print(f"  {job.name} 结束，退出码 {code}")
+        print()
+        return 0
+
+    scheduler.run_forever(poll_seconds=args.poll_seconds)
+    return 0
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     """一键初始化：建表 → 引导 → 采集 → 质量评测。"""
     from atmos.collect.runner import Collector
@@ -457,7 +509,6 @@ def build_parser() -> argparse.ArgumentParser:
     quality.add_argument("--assets", default=None, help="逗号分隔的资产 key")
 
     subparsers.add_parser("status", help="打印平台状态概览")
-
     assets = subparsers.add_parser("assets", help="列出数据资产")
     assets.add_argument("--domain", default=None)
     assets.add_argument("--layer", default=None)
@@ -485,6 +536,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="不自动打开默认浏览器（服务器与 CI 环境建议加上）",
     )
 
+    schedule = subparsers.add_parser(
+        "schedule", help="常驻调度：按 cron 执行采集与质量评测"
+    )
+    schedule.add_argument("--list", action="store_true", help="只打印作业清单与下次执行时间")
+    schedule.add_argument("--once", action="store_true", help="每个作业各跑一次后退出（验证配置）")
+    schedule.add_argument(
+        "--poll-seconds", type=float, default=20.0, help="检查间隔秒数，默认 20（必须小于 60）"
+    )
+
     return parser
 
 
@@ -498,6 +558,7 @@ COMMANDS = {
     "lineage": cmd_lineage,
     "cities": cmd_cities,
     "serve": cmd_serve,
+    "schedule": cmd_schedule,
 }
 
 

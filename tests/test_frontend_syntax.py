@@ -42,8 +42,17 @@ MIN_VIEWS = 16
 
 
 def _walk_js() -> list[Path]:
-    """``web/`` 下全部前端 JS（排除不存在的情况由断言负责）。"""
-    return sorted(path for path in WEB.rglob("*.js") if path.is_file())
+    """``web/`` 下的**自有**前端 JS。
+
+    排除 ``vendor/``：那里放的是随代码托管的第三方库（如 ECharts），
+    它们是 UMD 经典脚本、不以模块形式加载，用模块目标去解析既无意义
+    也不属于本项目的维护范围。
+    """
+    return sorted(
+        path
+        for path in WEB.rglob("*.js")
+        if path.is_file() and "vendor" not in path.parts
+    )
 
 
 def _declared_views() -> list[str]:

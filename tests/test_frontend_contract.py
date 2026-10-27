@@ -165,13 +165,37 @@ def test_index_html_boot_order() -> None:
     """
     html = (APP / "index.html").read_text(encoding="utf-8")
     assert 'type="module"' in html
-    for token in ("/shared/portal.js", "/portal-config.js", "echarts"):
+    # 门户配置用**相对路径**：反向代理把治理平台挂在 /gov/ 前缀下时，
+    # 绝对路径 `/portal-config.js` 会打到分析平台，导致落地页认错门户。
+    for token in ("/shared/portal.js", "portal-config.js", "echarts"):
         assert token in html, f"index.html 缺少 {token}"
 
     markup = re.sub(r"<!--.*?-->", "", html, flags=re.S)
-    assert markup.index("/portal-config.js") < markup.index("/shared/portal.js"), (
+    assert markup.index("portal-config.js") < markup.index("/shared/portal.js"), (
         "门户配置必须在应用脚本之前加载，否则 api.js 读不到后端地址"
     )
+
+
+def test_chart_library_is_served_locally() -> None:
+    """图表库必须随代码托管，不能依赖 CDN。
+
+    ``cdn.jsdelivr.net`` 在国内网络下经常不可达（实测会直接返回 502）。
+    那时页面能打开，但所有图表位置只剩一行提示 —— 属于"看起来正常、
+    实际功能缺失"的故障，因此用断言钉死本地托管。
+    """
+    html = (APP / "index.html").read_text(encoding="utf-8")
+    # 判定前剥掉注释：注释里提到 CDN 域名是为了解释"为什么不走 CDN"，
+    # 那不是一次加载。
+    markup = re.sub(r"<!--.*?-->", "", html, flags=re.S)
+    assert "cdn.jsdelivr.net" not in markup, "index.html 不应再从 CDN 加载图表库"
+    assert 'src="/static/vendor/echarts.min.js"' in markup, "图表库应指向本地 /static/vendor"
+
+    vendor = APP / "static" / "vendor" / "echarts.min.js"
+    assert vendor.exists(), (
+        "缺少 web/app/static/vendor/echarts.min.js；"
+        "见 DEPLOY.md 的“ECharts 本地化”一节"
+    )
+    assert vendor.stat().st_size > 500_000, "本地 ECharts 体积异常，疑似下载不完整"
 
 
 def test_index_html_declares_portal_switcher() -> None:

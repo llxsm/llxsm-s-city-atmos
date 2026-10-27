@@ -7,10 +7,12 @@
 <title>城市环境数据平台</title>
 <meta name="description" content="城市环境数据分析与数据资产治理的统一入口：实时实况、历史趋势、统计分布、污染过程、成因分析、达标考核、城市聚类，以及资产目录、数据血缘、质量评分与运行审计。" />
 <link rel="stylesheet" href="/shared/style.css" />
-<!-- 图表库走 CDN；若加载失败，charts.js 会在图表位置给出内联提示而不是抛错 -->
-<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+<!-- 图表库随代码一起托管（web/app/static/vendor），不走 CDN：
+     国内网络下 cdn.jsdelivr.net 经常不可达，届时所有图表位置只剩一行提示。
+     若仍加载失败，charts.js 会就地给出提示而不是抛错。 -->
+<script src="/static/vendor/echarts.min.js"></script>
 <!-- 运行时注入：当前服务托管哪个门户 + 两个后端的浏览器可达地址（必须早于 portal.js） -->
-<script src="/portal-config.js"></script>
+<script src="portal-config.js"></script>
 </head>
 <body>
 <div class="app" id="app">

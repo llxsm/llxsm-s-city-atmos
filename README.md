@@ -103,9 +103,52 @@ python -m atmos serve --portal both --port 8100 --governance-port 8101
 当前平台的功能不受影响。
 
 两个服务可以部署到不同机器，只要指向同一份 `ATMOS_LAKE_DIR` 与 `ATMOS_CATALOG_DB`，
-并配置 `ATMOS_ANALYSIS_PUBLIC_URL` / `ATMOS_GOVERNANCE_PUBLIC_URL` 让浏览器能找到对方，
-同时把 CORS 允许来源从 `*` 收紧为前端实际来源。生产环境建议分析平台只读挂载数据湖，
-采集与目录写入交给治理侧。
+并配置 `ATMOS_ANALYSIS_PUBLIC_URL` / `ATMOS_GOVERNANCE_PUBLIC_URL` 让浏览器能找到对方。
+此时两个 origin 不同，**必须**把 CORS 允许来源显式写成前端实际来源：
+
+```bash
+ATMOS_CORS_ORIGINS=https://atmos.example.com,https://gov.example.com
+```
+
+留空时不发任何 CORS 头 —— 那正是同源部署（反向代理按路径分流）需要的默认值，
+而不是"忘了配"。生产环境建议分析平台只读挂载数据湖，采集与目录写入交给治理侧。
+
+### 自动刷新数据
+
+调度是一个**独立的常驻进程**，不是 Web 服务内嵌的定时器：
+
+```bash
+python -m atmos schedule --list     # 只看作业清单与下次执行时间
+python -m atmos schedule --once     # 每个作业各跑一次后退出（验证配置）
+python -m atmos schedule            # 常驻，按 cron 执行
+```
+
+| 作业 | 默认 cron | 做什么 |
+| --- | --- | --- |
+| `collect` | `15 * * * *` | 增量采集，**跳过** ERA5 归档 |
+| `quality` | `30 * * * *` | 五维质量评测 |
+| `archive` | `20 4 * * *` | 完整采集，含归档回补 |
+
+为什么不做成内嵌定时器：两个门户都会起 Web 服务，内嵌会让同一批数据被采集两遍；
+独立进程让"谁在跑定时任务"只有一个答案，Web 重启也不会打断正在进行的采集。
+cron 写成空字符串即停用该作业。
+
+### 访问控制
+
+平台自带可选的应用内 HTTP Basic 认证，**两项同时配置才生效**：
+
+```bash
+ATMOS_AUTH_USER=yourname
+ATMOS_AUTH_PASSWORD=一个足够长的密码
+```
+
+配置后整站（含页面、`/api/docs`、`/portal-config.js`）都需要登录，只有
+`/api/health` 免认证 —— 它是 systemd 与监控系统的探针，要求每个探针单独配
+密码并不划算，而它只返回状态与版本号。
+
+放在应用层而不是只靠反向代理：服务允许 `--host 0.0.0.0`、允许换机器部署，
+代理配置不会跟着走，而这道门在代码里。注意 Basic 认证在明文 HTTP 下只是
+base64，**不提供加密**；要真正安全必须上 HTTPS。
 
 ### 验证运行状态
 
@@ -123,7 +166,7 @@ curl http://127.0.0.1:8000/portal-config.js   # current=analysis
 curl http://127.0.0.1:8001/portal-config.js   # current=governance
 ```
 
-> **数据不会自动更新**：内置定时调度尚未实现（配置项已预留）。刷新数据用
+> **数据不会自动更新**，除非你把 `python -m atmos schedule` 跑起来。手动刷新用
 > `python -m atmos collect`，或在分析看板的「数据刷新」页点一次采集。
 
 ---
@@ -442,6 +485,7 @@ python -m atmos assets --layer raw       # 数据资产列表
 python -m atmos lineage                  # 打印血缘图
 python -m atmos cities                   # 城市主数据
 python -m atmos serve --portal both      # 启动（analysis / governance / both）
+python -m atmos schedule                 # 常驻调度（--list / --once）
 ```
 
 任意命令追加 `--json` 可输出机器可读结果。
@@ -575,6 +619,9 @@ pytest tests/test_insights.py -k episodes
 | 16 | **界面与图表各维护一套配色**：样式表用 CSS 变量，图表则是 160 多处硬编码色值。换强调色后按钮变了、图表还是蓝的 | 令牌收敛到 `theme.js` 单一来源；图表改从 `ink()` / `palette()` 取色，并加断言禁止 `charts.js` 再出现硬编码色 |
 | 17 | **浅色状态照搬深色底上的文字色**：`--accent-ink` 原是按"向白混合"推导的浅色，白底上变成浅底浅字，对比度只有 1.47:1 | 该令牌按状态朝相反方向推导（深色态调浅、浅色态调深），并加 WCAG 对比度断言逐对校验 |
 | 18 | **各自取整破坏返回值的自洽性**：`weekend_mean − weekday_mean` 与 `delta` 分别四舍五入，两者可差 0.001；测试用 `1e-6` 容差比对，于是随播种时间不同偶发失败 | `delta` 改由取整后的两个均值相减，保证返回字段之间自洽（而不是放宽测试容差） |
+| 19 | **CORS 白名单只存在于文档里**：README 写着"把 CORS 允许来源收紧为前端实际来源"，代码却写死 `["*"] if env=="dev" else []` —— 一旦设成非 dev，两个门户相互访问全部被浏览器拦下，而错误现象是"页面能开、数据全空" | 新增 `ATMOS_CORS_ORIGINS`；留空的语义按环境区分（dev 放开为 `*`、其他环境不发 CORS 头），两种都有测试 |
+| 20 | **图表库依赖境外 CDN**：`cdn.jsdelivr.net` 在国内网络下经常直接 502，页面照常打开，但所有图表位置只剩一行提示 —— 又是一次"看起来正常、功能缺失" | ECharts 随代码托管到 `web/app/static/vendor/`（1MB，UMD 经典脚本），并加断言禁止 `index.html` 再引 CDN、校验本地文件体积 |
+| 21 | **门户配置用绝对路径**：反向代理把治理平台挂在 `/gov/` 前缀下时，`src="/portal-config.js"` 会打到分析平台，落地页认错门户；而其余 `/shared`、`/static` 用绝对路径却是安全的（两个服务托管同一批文件） | 只把 `portal-config.js` 改成相对路径，契约测试同步并注明"为什么只有它需要相对" |
 
 ---
 
@@ -582,8 +629,10 @@ pytest tests/test_insights.py -k episodes
 
 **当前边界（诚实说明）**
 
-- **无定时调度**：配置项已预留，但需要手动触发采集
-- **无鉴权**：没有用户体系，接口全开放；生产环境需加认证与资产级权限
+- **只有单账号认证**：可选的应用内 Basic 认证能挡住匿名访问，但没有用户体系、
+  没有角色与资产级权限，也没有操作审计（谁点了"触发采集"查不到人）
+- **调度不补跑**：`atmos schedule` 重启后从"现在"重新算下一次，不重放停机期间
+  错过的时次。补跑一小时前的天气采集没有业务意义；归档由每日作业天然覆盖
 - **浅色状态不跟随系统**：深浅是手动选择并记忆的，没有读取
   `prefers-color-scheme`。跟随系统需要引入"跟随 / 强制深 / 强制浅"三态，
   是另一个交互决定，这一版不做
@@ -595,7 +644,10 @@ pytest tests/test_insights.py -k episodes
 
 **后续演进**
 
-- [ ] 内置 cron 调度（配置项已预留）
+- [x] 定时调度：`python -m atmos schedule`（独立进程，标准 5 段 cron）
+- [x] 可选的应用内认证与可配置 CORS 白名单
+- [x] 图表库随代码托管，不再依赖 CDN
+- [ ] 多用户与角色权限、操作审计
 - [ ] 预警推送：Webhook / 邮件
 - [ ] 分析报告订阅：定期生成 PDF/Excel 并推送
 - [ ] 更多分析：污染过程溯源（后向轨迹）、区域传输贡献拆分、排放源反演

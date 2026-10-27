@@ -37,9 +37,24 @@ class Settings(BaseSettings):
     # ---------- 前端访问地址 ----------
     # 统一前端需要在浏览器里同时访问两个服务，因此必须告诉它两个后端的可达地址。
     # 留空时按 host:port 自动推断；两个服务部署在不同机器时显式配置这两个值，
-    # 并相应调整 CORS 允许来源（见 atmos/apps/common/webapp.py）。
+    # 并相应配置下面的 cors_origins。
     analysis_public_url: str = ""
     governance_public_url: str = ""
+
+    # 允许的跨源来源（逗号分隔，如 ``https://a.example.com,https://b.example.com``）。
+    # 留空时的行为随环境而变，两种都是有意的：
+    #   * ``env=dev``  → 放开为 ``*``，方便前端在任意端口调试；
+    #   * 其他环境      → 为空列表，即**不发** CORS 头。同源部署（反向代理按路径
+    #     分流两个门户，推荐形态）下这正是需要的；两个服务分处不同域名/端口时
+    #     必须显式填写，否则浏览器会拦下跨源请求。
+    cors_origins: str = ""
+
+    # ---------- 访问控制 ----------
+    # 应用内 HTTP Basic 认证：两项**同时**配置才生效，留空则整个平台无鉴权。
+    # 之所以放在应用层而不只依赖反向代理：服务监听地址可能被改成 0.0.0.0、
+    # 也可能被换机器部署，代理配置不会跟着走，而这道门在代码里。
+    auth_user: str = ""
+    auth_password: str = ""
 
     # 启动服务后自动用默认浏览器打开看板。
     # 无图形界面的环境（服务器、CI、WSL 无 X）请设为 false，或用 ATMOS_OPEN_BROWSER=false。
@@ -75,9 +90,13 @@ class Settings(BaseSettings):
     forecast_past_days: int = 2
 
     # ---------- 调度 ----------
-    scheduler_enabled: bool = False
-    schedule_collect_cron: str = "15 * * * *"
-    schedule_quality_cron: str = "30 * * * *"
+    # 由 `python -m atmos schedule` 这个常驻进程消费；不跑该命令就不会有任何
+    # 自动任务。刻意不做成"Web 服务里内嵌定时器"：两个门户都会启动 Web 服务，
+    # 内嵌定时器会让同一份数据被采集两遍。
+    # 值留空表示**停用**该作业。
+    schedule_collect_cron: str = "15 * * * *"   # 每小时第 15 分：增量采集（跳过归档）
+    schedule_quality_cron: str = "30 * * * *"   # 每小时第 30 分：五维质量评测
+    schedule_archive_cron: str = "20 4 * * *"   # 每天 04:20：回补 ERA5 归档（上游约 5 天延迟）
 
     # ---------- 校验 ----------
     @field_validator("log_level")
@@ -96,6 +115,15 @@ class Settings(BaseSettings):
         return value
 
     # ---------- 派生属性 ----------
+    @property
+    def auth_enabled(self) -> bool:
+        """应用内认证是否启用（用户名与密码都配置了才算）。"""
+        return bool(self.auth_user and self.auth_password)
+
+    def cors_origin_list(self) -> list[str]:
+        """解析 ``cors_origins``，去掉空白与尾斜杠（Origin 头从不带尾斜杠）。"""
+        return [item.strip().rstrip("/") for item in self.cors_origins.split(",") if item.strip()]
+
     @property
     def lake_path(self) -> Path:
         """数据湖绝对路径。"""

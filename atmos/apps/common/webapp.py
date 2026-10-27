@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 
 from atmos import __version__
+from atmos.apps.common.auth import register_basic_auth
 from atmos.catalog.bootstrap import bootstrap_catalog
 from atmos.catalog.definitions import load_registry
 from atmos.db import init_db, session_scope
@@ -187,12 +188,18 @@ def build_app(
         openapi_url="/api/openapi.json",
     )
 
+    # 中间件顺序：Starlette 里后注册的在**更外层**。
+    # 认证先注册、CORS 后注册，于是请求依次经过 CORS → 认证 → 路由：
+    # 认证拒绝产生的 401 仍会经过 CORS 加上跨源头，跨源部署时前端才能读到
+    # "需要登录"而不是一个看不出原因的 CORS 失败。
+    register_basic_auth(app, settings)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"] if settings.env == "dev" else [],
+        allow_origins=settings.cors_origin_list() or (["*"] if settings.env == "dev" else []),
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["Content-Disposition"],
     )
 
     for router in routers:
@@ -235,6 +242,7 @@ def _register_api_fallback(app: FastAPI) -> None:
 __all__ = [
     "build_app",
     "portal_lifespan",
+    "register_basic_auth",
     "register_error_handlers",
     "register_frontend",
     "register_frontend_cache",

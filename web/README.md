@@ -36,13 +36,16 @@ web/
 
 因此：
 
-* `index.html` 按固定顺序加载三样东西：ECharts（CDN）→ `/portal-config.js`
+* `index.html` 按固定顺序加载三样东西：ECharts → `portal-config.js`
   （**必须早于 `portal.js`**，`api.js` 在加载时就要读它）→ 模块化外壳脚本；
+* `portal-config.js` 是**唯一的相对路径**（`src="portal-config.js"`）：服务被反向
+  代理挂在 `/gov/` 这类前缀下时，绝对路径会打到另一个门户，落地页就认错了身份；
 * 视图模块用**绝对说明符**导入共享模块：`import { el } from '/shared/ui.js'`，
   不要写 `../../shared/ui.js`；
 * 视图模块的 `module` 路径也是绝对路径：`/static/views/<name>.js`；
-* ECharts 通过 CDN 的 `<script>` 标签引入，`charts.js` 不 import 它，
-  只在缺失时于图表位置给出内联提示。
+* ECharts 随代码托管在 `static/vendor/echarts.min.js`，用 `<script>` 标签引入，
+  `charts.js` 不 import 它，只在缺失时于图表位置给出内联提示。**不走 CDN**：
+  `cdn.jsdelivr.net` 在国内网络下经常直接不可达，图表的失败方式是"静默变空白"。
 
 两个服务监听同样的路径，只是端口不同（分析 8000、治理 8001），
 共享模块与视图的绝对 URL 在两边解析结果一致 —— 这是"一份前端"的关键。
